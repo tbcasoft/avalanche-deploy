@@ -10,9 +10,9 @@
 
 # Password generation - ensure consistency across all templates
 - name: Check for existing DB password
-  ansible.builtin.stat:
+  ansible.builtin.stat: #a nodule which retrieves file or file system status details, acting like the Linux stat command
     path: "{{ safe_install_dir }}/.db_password"
-  register: safe_db_password_file
+  register: safe_db_password_file # assign the db password file name to variable
 
 - name: Read existing DB password
   ansible.builtin.slurp:

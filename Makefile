@@ -17,7 +17,10 @@ NETWORK ?= fuji
 AUTO_APPROVE ?= false
 TF_INIT_RETRIES ?= 3
 SKIP_TERRAFORM_VALIDATE ?= false
+# generated after terraform apply.  Resource located at
+# ubuntu@ip-10-8-3-214:/data/tbcasoft/avalanche-deploy/ansible/inventory$ cat aws_hosts
 ANSIBLE_INVENTORY = inventory/$(CLOUD)_hosts
+
 PRIMARY_TF_DIR = terraform/primary-network/aws
 PRIMARY_ANSIBLE_INVENTORY = inventory/aws_primary_hosts
 ANSIBLE_SYNTAX_INVENTORY ?= ../tests/fixtures/syntax_inventory.ini
@@ -113,6 +116,9 @@ infra-plan:
 
 #
 # Deploy
+# To run it manually:
+# ubuntu@ip-10-8-3-214:/data/tbcasoft/avalanche-deploy/ansible$ ansible-playbook -i inventory/aws_hosts playbooks/l1/deploy-nodes.yml -e network=fuji
+# NOTE:  it looks at ./inventory/aws_hosts for information used by playbook.
 #
 deploy:
 	@echo "Deploying nodes..."
@@ -168,6 +174,10 @@ create-l1:
 	@echo "Built tools/create-l1/create-l1 (binary only - the L1 is NOT created yet)."
 	@echo "Next, create your L1 by running the tool (writes l1.env):"
 	@echo "  ./tools/create-l1/create-l1 --network=fuji --validators=<ip1>,<ip2> --genesis=genesis.json"
+	##
+	# ubuntu@ip-10-8-3-214:/data/tbcasoft/avalanche-deploy/tools/create-l1$ ./create-l1 --network=fuji
+	# --validators=3.135.203.13,18.218.96.239 --genesis=genesis.json --key-name=my-l1-key-admin  --chain-name=vdnslb --output=l1.env
+	##
 
 #
 # Blockscout Block Explorer

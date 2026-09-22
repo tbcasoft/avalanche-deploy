@@ -33,8 +33,16 @@
 #   churn_period: Churn period in seconds (default: 0)
 #   max_churn_percent: Maximum churn percentage (default: 20)
 #   network: fuji (default) or mainnet
+##
 #   glacier_api_key: Glacier API key for signature aggregation (passed to the
 #                    tool via the GLACIER_API_KEY environment variable, never argv)
+##  Glacier (also known as Avalanche Data API) is a developer tool used to query on-chain data.
+##  In addition, Glacier provides a specialized Signature Aggregator tool designed to facilitate Avalanche Interchain Messaging (ICM).
+##  When separate Layer 1 blockchains (Subnets) on Avalanche want to communicate with each other,
+##  they use BLS multi-signatures to verify messages.  Glacier’s Signature Aggregator provides an off-chain
+##  API endpoint to collect, bundle, and compress these individual signatures into a single,
+##  compact aggregated signature.
+##
 #   use_local_sig_agg: Use local signature aggregator instead of Glacier (default: false)
 #   icm_contracts_path: Path to icm-contracts repository
 

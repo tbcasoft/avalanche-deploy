@@ -12,6 +12,11 @@
 #     -e chain_id=<CHAIN_ID>
 
 - name: Gather L1 Validator Info
+  ##
+  # Specifies which remote servers, virtual machines, or network devices the tasks within that play should execute against.
+  # Ansible searches its inventory source to map which IP addresses or domain names belong to that group label.
+  # "ansible_invetory" is an output within terraform/l1/aws output.tf file.  It is populated after "terraform apply".
+  ##
   hosts: validators
   become: false
   gather_facts: false

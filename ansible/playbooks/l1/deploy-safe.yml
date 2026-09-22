@@ -22,8 +22,8 @@
     - name: Check if avalanchego is running
       ansible.builtin.systemd:
         name: avalanchego
-      register: avalanchego_status
-      changed_when: false
+      register: avalanchego_status # captures the output of a task and saves it into a variable
+      changed_when: false #conditional which defines task state change if systemd returns false
       failed_when: false
 
     - name: Warn if avalanchego is not running
@@ -39,14 +39,14 @@
       ansible.builtin.uri:
         url: "http://localhost:{{ safe_txs_port }}/api/v1/about/"
         method: GET
-      register: txs_about
+      register: txs_about # captures the output of "about" and saves it into variable
       failed_when: false
 
     - name: Verify Config Service health
       ansible.builtin.uri:
         url: "http://localhost:{{ safe_cfg_port }}/api/v1/about/"
         method: GET
-      register: cfg_about
+      register: cfg_about # captures the output of a task and saves it into a variable
       failed_when: false
 
     - name: Verify Client Gateway health

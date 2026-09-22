@@ -109,7 +109,7 @@ ssh_private_key_file = "~/.ssh/avalanche-deploy"
 enable_staking_key_backup = true
 ```
 
-#### Remote State (optional, recommended for teams)
+#### NOTE: NOT ENABLED for my POC - Remote State (optional, recommended for teams)
 
 By default Terraform keeps state in a local `terraform.tfstate` — fine for a
 solo trial run, but it has no locking, isn't shared, and goes stale (we have
@@ -140,13 +140,83 @@ Notes:
 ### 3. Create Infrastructure
 
 ```bash
-make infra    # or: cd terraform/l1/aws && terraform apply
+##
+# Create aws resources, security group, ingress/egress rules.  No Avalanche resources (e.g. avago) are created yet.
+# See terraform/l1/aws/outputs.tf for the outputs that are generated.  These outputs are used by the ansible playbooks to configure the Avalanche nodes.
+##
+make infra    
 ```
 
 ### 4. Deploy Avalanchego
 
 ```bash
 make deploy
+
+### Output of this step ####
+
+PLAY [Deploy Avalanche Nodes (Phase 1 - Primary Network Sync)] 
+
+TASK [avalanchego : Create directories] 
+changed: [validator-2] => (item=/var/lib/avalanchego)
+...
+
+TASK [avalanchego : Resolve release asset name for this architecture] 
+27     avalanchego_release_arch: "{{ 'arm64' if ansible_architecture in ['aarch64', 'arm64'] else 'amd64' }}"
+                                 ^ column 31
+TASK [avalanchego : Install avalanchego binary and bundled subnet-evm plugin]
+TASK [avalanchego : Resolve release tarball name] 
+
+TASK [avalanchego : Install grafted subnet-evm plugin (restart only on change)] 
+TASK [avalanchego : Install subnet-evm plugin (restart only on change)] 
+TASK [avalanchego : Find downloaded subnet-evm tarballs] 
+
+TASK [avalanchego : Clean up download artifacts] 
+changed: [validator-2] => (item=/tmp/avalanchego-linux-amd64-v1.15.0-fuji.tar.gz)
+changed: [validator-2] => (item=/tmp/subnet-evm-linux-amd64-v1.15.0-fuji.tar.gz)
+...
+
+TASK [avalanchego : Resolve custom node config path] 
+TASK [avalanchego : Load custom node config from repository config directory]
+TASK [avalanchego : Build base node configuration] 
+TASK [avalanchego : Add subnet tracking to config] 
+TASK [avalanchego : Add L1 bootstrap info to config] 
+TASK [avalanchego : Merge custom config with base config]
+
+[validator-1] => {"msg": "avalanchego service is active on validator-1"}
+[validator-2] => {"msg": "avalanchego service is active on validator-2"}
+[rpc-archive-1] => {"msg": "avalanchego service is active on rpc-archive-1"}
+[rpc-pruned-1] => "msg": "avalanchego service is active on rpc-pruned-1"}
+
+[validator-1] => {"msg": "validator-1: P-Chain still bootstrapping - normal for a fresh node; the service is up and the API is responding"}
+[validator-2] => {"msg": "validator-2: P-Chain still bootstrapping - normal for a fresh node; the service is up and the API is responding"}
+[rpc-archive-1] => {"msg": "rpc-archive-1: P-Chain still bootstrapping - normal for a fresh node; the service is up and the API is responding"}
+[rpc-pruned-1] => {"msg": "rpc-pruned-1: P-Chain still bootstrapping - normal for a fresh node; the service is up and the API is responding"}
+    
+[validator-1] => { "msg": "validator-1: NodeID-K6cwgvj9CUrLRjF6gieVjHs6aGZo2Pski"}
+[validator-2] => {"msg": "validator-2: NodeID-CE4LDYiXYTmEfqHqsVGJojBLrG9ser6wD"}
+[rpc-archive-1] => {"msg": "rpc-archive-1: NodeID-KLSsBCkDb8HQVLtqv65jFhfxnWA5bUFnd"}
+[rpc-pruned-1] => {"msg": "rpc-pruned-1: NodeID-KiuodpFFeG5iSt8GF53EEiasX9h5Va8Ro"}
+	
+[validator-1] => {"msg": "Staking keys backed up to s3://vdn-sl-b-validator-keys/validator-1/staking-keys.tar.gz"}
+[validator-2] => {"msg": "Staking keys backed up to s3://vdn-sl-b-validator-keys/validator-2/staking-keys.tar.gz"}
+
+Phase 1 Complete - Nodes Deployed.  Node IDs saved to: ansible/node_ids.txt.S taking keys backed up to S3 (if enabled).
+Next steps:
+1.  Wait for nodes to sync with fuji.  Check: curl http://<node-ip>:9650/ext/health
+2.  Create your L1:  cd tools/create-l1
+export AVALANCHE_PRIVATE_KEY=PrivateKey-..
+./create-l1 --network=fuji --validators=<ip1>,<ip2>,<ip3> --genesis=../../configs/l1/genesis/genesis.json
+3.  Configure nodes with your L1:  SUBNET_ID=<from-create-l1-output>
+ansible-playbook playbooks/l1/configure.yml -e subnet_id=$SUBNET_ID
+
+PLAY RECAP *******
+  localhost                  : ok=1 ...
+  rpc-archive-1              : ok=53
+  rpc-pruned-1               : ok=53
+  validator-1                : ok=62
+  validator-2                : ok=62
+
+	
 make status   # Wait for "P:OK" on all nodes
 ```
 
@@ -159,23 +229,40 @@ make status   # Wait for "P:OK" on all nodes
 > ```
 >
 > (`go install` names the binary `platform-cli`; alias it to `platform`, or build from source with `go build -o platform .` as shown in the [platform-cli README](https://github.com/ava-labs/platform-cli).)
+> 
+> (platform version results in 'platform dev')
 >
 > **No extra tool needed:** you can skip platform-cli entirely and export your key directly — `export AVALANCHE_PRIVATE_KEY=0x...`. The tools accept raw hex or `PrivateKey-` CB58. Key precedence: `--key-name` > `AVALANCHE_PRIVATE_KEY` > keystore default.
 >
 > **Funding:** you need ~1.5+ AVAX on the Fuji P-Chain (1 AVAX per validator balance + fees) — fund via <https://core.app/tools/testnet-faucet> (C-Chain) then transfer C→P, or ask in the thread.
 
 ```bash
+# Key generation (platform-cli keystore)
+ubuntu@ip-10-8-3-214:~$ platform keys generate --name my-l1-key-admin-created-from-platform-cli
+Keys metadata stored at:  /home/ubuntu/.platform/keys/my-l1-key-admin-created-from-platform-cli.key 
+- "ciphertext" s the encrypted version of your private key when it is stored at rest on your machine.  Storing a raw private key (plaintext) is a security risk.  The platform-cli encrypts your private key with a 
+password and stores it in the keystore.
+
+Every time you execute a command to transfer funds (like avalanche key transfer), the CLI reads this ciphertext, asks you for your passphrase to unlock it, turns it back into the plaintext key in your computer 
+temporary memory, signs the transaction, and immediately wipes it.
+
+- "salt" a random string of data added to an input (like a password or passphrase) before it is passed through a cryptographic function for encryption
+- "nonce" stands for "number used once.".  This ensures that encrypting the same data twice results in completely different ciphertext.
+
 # Recommended key flow (platform-cli keystore)
 platform keys import --name l1-deployer
 platform keys default --name l1-deployer
 
 # Build and run create-l1 tool
+
+
+OR
 make create-l1
 ./tools/create-l1/create-l1 \
   --network=fuji \
-  --key-name=l1-deployer \
+  --key-name=[REPLACE_WITH_YOUR_CHAINNAME, e.g. my-l1-key-admin] \
   --validators=$(cd terraform/l1/aws && terraform output -json validator_ips | jq -r 'join(",")') \
-  --chain-name=mychain \
+  --chain-name=[REPLACE_WITH_YOUR_CHAINNAME] \
   --output=l1.env
 ```
 

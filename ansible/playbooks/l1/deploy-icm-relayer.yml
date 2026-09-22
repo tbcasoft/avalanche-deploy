@@ -51,13 +51,18 @@
         - relayer_private_key
 
 - name: Deploy ICM Relayer
+  ##
+  # Specifies which remote servers, virtual machines, or network devices the tasks within that play should execute against.
+  # Ansible searches its inventory source to map which IP addresses or domain names belong to that group label.
+  # "ansible_invetory" is an output within terraform/l1/aws output.tf file.  It is populated after "terraform apply".
+  ##
   hosts: rpc[0]
-  become: true
+  become: true #By default, activating become grants you full root administrative privileges via sudo
   gather_facts: true
 
   pre_tasks:
     - name: Wait for system to become reachable
-      ansible.builtin.wait_for_connection:
+      ansible.builtin.wait_for_connection:  #ansible module which waits for rpc[0] to be reachable before proceeding with the playbook
         timeout: 300
 
   roles:
@@ -74,11 +79,11 @@
   gather_facts: false
   tasks:
     - name: Get RPC node IP
-      ansible.builtin.set_fact:
+      ansible.builtin.set_fact: #ansible module which allows us to dynamically set variable on the fly during playbook execution.
         relayer_host: "{{ hostvars[groups['rpc'][0]]['ansible_host'] }}"
 
     - name: Show ICM Relayer information
-      ansible.builtin.debug:
+      ansible.builtin.debug: #ansible module which allows us to display debug information during playbook execution.
         msg: |
 
           ============================================

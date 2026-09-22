@@ -19,6 +19,11 @@ go build -o create-l1 .
 ```
 
 ## Usage
+export PLATFORM_CLI_KEY_PASSWORD=[YOUR_PASSWORD]
+
+Note:  by default, wallet stored in platform-cli keystore.  This wallet is password protected.
+
+ubuntu@ip-10-8-3-214:/data/tbcasoft/avalanche-deploy/tools/create-l1$ ./create-l1 --genesis=/data/tbcasoft/avalanche-deploy/configs/l1/genesis/genesis.json --chain-name=vdnslb -key-name my-l1-key-admin-created-from-platform-cli --validators=3.135.203.13,18.218.96.239  --output=l1.env
 
 ### Basic Usage
 

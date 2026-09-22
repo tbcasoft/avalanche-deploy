@@ -231,12 +231,25 @@ func run() error {
 	subnetID := subnetTx.ID()
 	fmt.Printf("  Subnet ID: %s\n", subnetID)
 
-	// Re-sync wallet with subnet (use public API)
-	wallet, err = primary.MakePWallet(ctx, walletURI, kc, primary.WalletConfig{
-		SubnetIDs: []ids.ID{subnetID},
-	})
-	if err != nil {
-		return fmt.Errorf("failed to re-sync wallet: %w", err)
+	/**
+	Re-sync (i.e re-fetches P-Chain state) wallet with subnet (use public API).  Immediately after IssueCreateSubnetTx,
+	the code calls MakePWallet.  This P-state sync can fail as we are querying P-Chain state immediately, not allowing P-chain state to materialize.
+
+	For best practice, we are going to perform retries with exponential backoff.
+	*/
+	for attempt := 1; attempt <= 10; attempt++ {
+		wallet, err = primary.MakePWallet(ctx, walletURI, kc, primary.WalletConfig{
+			SubnetIDs: []ids.ID{subnetID},
+		})
+		if err == nil {
+			break
+		}
+		if attempt == 10 {
+			return fmt.Errorf("failed to re-sync wallet after creating subnet %s: %w", subnetID, err)
+		}
+
+		fmt.Printf("  Wallet re-sync attempt %d failed; retrying...\n", attempt)
+		time.Sleep(2 * time.Second)
 	}
 
 	// Create chain
