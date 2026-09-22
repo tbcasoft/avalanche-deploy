@@ -1,4 +1,5 @@
-module core
+module github.com/tbcasoft/avalanche-deploy/tools/core
+
 
 go 1.26.4
 

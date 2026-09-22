@@ -1,4 +1,4 @@
-module github.com/ava-labs/avalanche-deploy/tools/create-l1
+module github.com/tbcasoft/avalanche-deploy/tools/create-l1
 
 go 1.25.10
 

@@ -1,9 +1,9 @@
 package main
 
 import (
-	"core"
 	"flag"
 	"fmt"
+	"github.com/tbcasoft/avalanche-deploy/tools/core"
 	"os"
 )
 
