@@ -28,3 +28,7 @@ func ValidateChainName(name string) error {
 
 	return nil
 }
+
+func ParseValidatorIPs(valIPs string) ([]string, error) {
+	return nil, nil
+}

@@ -37,5 +37,11 @@ func run() error {
 		return err
 	}
 
+	// Parse validator IPs
+	ips, err := core.ParseValidatorIPs()
+	if err != nil {
+		return fmt.Errorf("failed to parse validator IPs: %w", err)
+	}
+
 	return nil
 }
