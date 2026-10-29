@@ -35,8 +35,9 @@ func run() error {
 
 	fmt.Println("=== Create Subnet ===")
 	fmt.Printf("Network:    %s (ID: %d)\n", core.NetworkName, networkID)
+	fmt.Printf("Using RPC endpoint:    %s\n", rpcEndpoint)
 
-	fmt.Println("[1/4] Creating wallet...")
+	fmt.Println("[1/2] Creating wallet...")
 	key, err := core.LoadPrivateKey(core.KeyName) //load key from default keystore
 	if err != nil {
 		return fmt.Errorf("failed to load private key: %w", err)
@@ -56,19 +57,19 @@ func run() error {
 	Get the P-chain wallet used to pay for transactions.
 
 	UTXO stands for Unspent Transaction Output. It is the accounting model used by cryptocurrencies like Bitcoin, Litecoin,
-	and parts of the Avalanche network (specifically the X-Chain and P-Chain) to track digital currency ownership.
+	and parts of the Avalanche network (specifically the X-Chain and P-Chain) to track digital currency ownership and balance.
 	*/
 	wallet, err := primary.MakePWallet(ctx, walletURI, kc, primary.WalletConfig{})
 	if err != nil {
 		return fmt.Errorf("failed to create wallet: %w", err)
 	}
-	fmt.Printf("  Our P-chain Wallet loaded successfully\n")
+	fmt.Printf("  Our P-chain Wallet (%s) loaded successfully\n", core.KeyName)
 	fmt.Printf("  P-Chain Address: %s\n", ownerAddress)
 	fmt.Printf("  EVM Address:     %s\n", ethAddress)
 	fmt.Printf("  Required P-Chain balance: ~%.2f AVAX per validator\n", core.BalanceAVAX)
 
 	// Create subnet
-	fmt.Println("[2/4] Creating subnet...")
+	fmt.Println("[2/2] Creating subnet...")
 	owner := &secp256k1fx.OutputOwners{
 		Threshold: 1,
 		Addrs:     []ids.ShortID{ownerAddress},
@@ -79,9 +80,8 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("failed to create subnet: %w", err)
 	}
-
 	subnetID := subnetTx.ID()
-	fmt.Printf("  Subnet ID: %s\n", subnetID)
+	fmt.Printf("  IssueCreateSubnetTx success.  Txn id: %s.  Actual Subnet ID: %s\n", subnetTx.TxID, subnetID)
 
 	/**
 	Re-sync wallet with subnet (use public API).
@@ -96,16 +96,17 @@ func run() error {
 			SubnetIDs: []ids.ID{subnetID},
 		})
 		if err == nil {
+			fmt.Printf("We were able  to re-sync wallet after creating subnet (id: %s)\n", subnetID)
 			break
 		}
 		if attempt == 10 {
-			return fmt.Errorf("failed to re-sync wallet after creating subnet %s: %w", subnetID, err)
+			return fmt.Errorf("failed to re-sync wallet after creating subnet (id: %s), error: %w\n", subnetID, err)
 		}
 
 		fmt.Printf("  Wallet re-sync attempt %d failed; retrying...\n", attempt)
 		time.Sleep(2 * time.Second)
 	}
 
-	fmt.Printf("==== Subnet created, and we were ")
+	fmt.Printf("==== Subnet Creation Done ===\n")
 	return nil
 }
