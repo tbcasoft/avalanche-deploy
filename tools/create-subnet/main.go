@@ -17,6 +17,7 @@ func main() {
 	flag.StringVar(&core.NetworkName, "network", "fuji", "Network: fuji or mainnet")
 	flag.StringVar(&core.KeyName, "key-name", "", "Key name from platform-cli keystore (~/.platform/keys, preferred)")
 	flag.StringVar(&core.OutputFile, "output", "l1.env", "Output file for subnet/chain IDs")
+	flag.StringVar(&core.RpcUrL, "rpcurl", "", "Rpc node http endpoint.")
 	flag.Parse()
 
 	if err := run(); err != nil {
@@ -36,7 +37,7 @@ func run() error {
 	fmt.Printf("Network:    %s (ID: %d)\n", core.NetworkName, networkID)
 
 	fmt.Println("[1/4] Creating wallet...")
-	key, err := core.LoadPrivateKey("") //load key from default keystore
+	key, err := core.LoadPrivateKey(core.KeyName) //load key from default keystore
 	if err != nil {
 		return fmt.Errorf("failed to load private key: %w", err)
 	}
