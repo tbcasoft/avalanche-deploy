@@ -6,7 +6,7 @@ go 1.26.4
 
 require (
 	github.com/ava-labs/avalanchego v1.15.0
-	github.com/tbcasoft/avalanche-deploy/tools/core v0.0.0-20261016184459-b3d3c8efac1b
+	github.com/tbcasoft/avalanche-deploy/tools/core v0.0.0-20261029182941-062b39107c01
 )
 
 require (
@@ -18,6 +18,7 @@ require (
 	github.com/VictoriaMetrics/fastcache v1.12.1 // indirect
 	github.com/ava-labs/avalanchego/graft/coreth v1.15.0 // indirect
 	github.com/ava-labs/avalanchego/graft/evm v1.15.0 // indirect
+	github.com/ava-labs/ledger-avalanche-go v1.1.0 // indirect
 	github.com/ava-labs/libevm v1.13.15-0.20260903154605-2eaf73af626c // indirect
 	github.com/ava-labs/platform-cli v1.0.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -45,6 +46,7 @@ require (
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/gofrs/flock v0.12.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
+	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb // indirect
 	github.com/google/btree v1.1.3 // indirect
 	github.com/google/renameio/v2 v2.0.0 // indirect
@@ -78,6 +80,9 @@ require (
 	github.com/tklauser/go-sysconf v0.3.15 // indirect
 	github.com/tklauser/numcpus v0.10.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
+	github.com/zondax/golem v0.27.0 // indirect
+	github.com/zondax/hid v0.9.2 // indirect
+	github.com/zondax/ledger-go v1.0.1 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/otel v1.44.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.43.0 // indirect

@@ -32,6 +32,8 @@ github.com/ava-labs/avalanchego/graft/evm v1.15.0 h1:y/yu6dQllNekN4cWj7j6uaDim9N
 github.com/ava-labs/avalanchego/graft/evm v1.15.0/go.mod h1:KbTaLdDYFn5SKhEjae90q8R3mBugxSrjkOopX0LYLqo=
 github.com/ava-labs/firewood-go-ethhash/ffi v0.8.0 h1:EDhwnUb6Fy/88cqUCcuj0R5u8isB+Vv++v/r2mawp2g=
 github.com/ava-labs/firewood-go-ethhash/ffi v0.8.0/go.mod h1:3pf8KGfCmqegWoY5/pZ1NHUcyuRkfl/vHQuOjsdUtbI=
+github.com/ava-labs/ledger-avalanche-go v1.1.0 h1:OkscKtb/gX20HBt8RyAtwXLrQnCEls5SzWGieE7NoNM=
+github.com/ava-labs/ledger-avalanche-go v1.1.0/go.mod h1:mAlG9ptnPjvNoLGLHXnM3slGY8ewvBJtJNVTEjG8KvI=
 github.com/ava-labs/libevm v1.13.15-0.20260903154605-2eaf73af626c h1:EXYCiPFEnTRTV5hX+Yv+WlOFxVm2Py59KtVnXAJJCmM=
 github.com/ava-labs/libevm v1.13.15-0.20260903154605-2eaf73af626c/go.mod h1:6NxGoR1aLABnfLy+fncXRj0W6rUoUrXghnAWZ+Rhr4o=
 github.com/ava-labs/platform-cli v1.0.0 h1:BWQzm3QE8lWXzwqn56+QJM9ZxEelTWMXzMOQQACMbgc=
@@ -417,8 +419,8 @@ github.com/supranational/blst v0.3.14/go.mod h1:jZJtfjgudtNl4en1tzwPIV3KjUnQUvG3
 github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7/go.mod h1:q4W45IWZaF22tdD+VEXcAWRA037jwmWEB5VWYORlTpc=
 github.com/syndtr/goleveldb v1.0.1-0.20220614013038-64ee5596c38a h1:1ur3QoCqvE5fl+nylMaIr9PVV1w343YRDtsy+Rwu7XI=
 github.com/syndtr/goleveldb v1.0.1-0.20220614013038-64ee5596c38a/go.mod h1:RRCYJbIwD5jmqPI9XoAFR0OcDxqUctll6zUj/+B4S48=
-github.com/tbcasoft/avalanche-deploy/tools/core v0.0.0-20261016184459-b3d3c8efac1b h1:aIBrVCJxehDx6JaGIKN4XAiYC8wKZdVcecQR0+n3Nuc=
-github.com/tbcasoft/avalanche-deploy/tools/core v0.0.0-20261016184459-b3d3c8efac1b/go.mod h1:0P9ErmKc3TC5IZQu1kxiDp18yVmT3edZAoocak1lfAA=
+github.com/tbcasoft/avalanche-deploy/tools/core v0.0.0-20261029182941-062b39107c01 h1:SEaZMpfxCrGnacjkj9aHZaqDUbupkVA0YVKJDij+Ep8=
+github.com/tbcasoft/avalanche-deploy/tools/core v0.0.0-20261029182941-062b39107c01/go.mod h1:0P9ErmKc3TC5IZQu1kxiDp18yVmT3edZAoocak1lfAA=
 github.com/thepudds/fzgen v0.4.3 h1:srUP/34BulQaEwPP/uHZkdjUcUjIzL7Jkf4CBVryiP8=
 github.com/thepudds/fzgen v0.4.3/go.mod h1:BhhwtRhzgvLWAjjcHDJ9pEiLD2Z9hrVIFjBCHJ//zJ4=
 github.com/tklauser/go-sysconf v0.3.15 h1:VE89k0criAymJ/Os65CSn1IXaol+1wrsFHEB8Ol49K4=
@@ -454,6 +456,12 @@ github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9dec
 github.com/yuin/goldmark v1.3.5/go.mod h1:mwnBkeHKe2W/ZEtQ+71ViKU8L12m81fl3OWwC1Zlc8k=
 github.com/yusufpapurcu/wmi v1.2.4 h1:zFUKzehAFReQwLys1b/iSMl+JQGSCSjtVqQn9bBrPo0=
 github.com/yusufpapurcu/wmi v1.2.4/go.mod h1:SBZ9tNy3G9/m5Oi98Zks0QjeHVDvuK0qfxQmPyzfmi0=
+github.com/zondax/golem v0.27.0 h1:IbBjGIXF3SoGOZHsILJvIM/F/ylwJzMcHAcggiqniPw=
+github.com/zondax/golem v0.27.0/go.mod h1:AmorCgJPt00L8xN1VrMBe13PSifoZksnQ1Ge906bu4A=
+github.com/zondax/hid v0.9.2 h1:WCJFnEDMiqGF64nlZz28E9qLVZ0KSJ7xpc5DLEyma2U=
+github.com/zondax/hid v0.9.2/go.mod h1:l5wttcP0jwtdLjqjMMWFVEE7d1zO0jvSPA9OPZxWpEM=
+github.com/zondax/ledger-go v1.0.1 h1:Ks/2tz/dOF+dbRynfZ0dEhcdL1lqw43Sa0zMXHpQ3aQ=
+github.com/zondax/ledger-go v1.0.1/go.mod h1:j7IgMY39f30apthJYMd1YsHZRqdyu4KbVmUp0nU78X0=
 go.opentelemetry.io/auto/sdk v1.2.1 h1:jXsnJ4Lmnqd11kwkBV2LgLoFMZKizbCi5fNZ/ipaZ64=
 go.opentelemetry.io/auto/sdk v1.2.1/go.mod h1:KRTj+aOaElaLi+wW1kO/DZRXwkF4C5xPbEe3ZiIhN7Y=
 go.opentelemetry.io/otel v1.44.0 h1:JjwHmHpA4iZ3wBxluu2fbbE7j4kqlE8jXyAyPXH7HqU=
