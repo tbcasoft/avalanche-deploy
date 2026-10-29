@@ -2,7 +2,10 @@ module github.com/tbcasoft/avalanche-deploy/tools/create-chain
 
 go 1.26.4
 
-require github.com/tbcasoft/avalanche-deploy/tools/core v0.0.0-20260922023312-17eb2fb2d4c6
+//require github.com/tbcasoft/avalanche-deploy/tools/core v0.0.0-20261016184459-b3d3c8efac1b
+replace github.com/tbcasoft/avalanche-deploy/tools/core => ../core
+
+require github.com/tbcasoft/avalanche-deploy/tools/core v0.0.0-00010101000000-000000000000
 
 require (
 	connectrpc.com/connect v1.18.1 // indirect
