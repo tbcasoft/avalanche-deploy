@@ -6,7 +6,7 @@ go 1.26.4
 
 require (
 	github.com/ava-labs/avalanchego v1.15.0
-	github.com/tbcasoft/avalanche-deploy/tools/core v0.0.0-20261029182941-062b39107c01
+	github.com/tbcasoft/avalanche-deploy/tools/core v0.0.0-20261029184725-54fe1a2d0f22
 )
 
 require (
