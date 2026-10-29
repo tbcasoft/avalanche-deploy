@@ -360,7 +360,3 @@ func CheckGenesisFunding(genesisBytes []byte, address string) (bool, string) {
 
 	return false, ""
 }
-
-func ToSubnetId(id string) (ids.ID, error) {
-
-}
