@@ -12,7 +12,7 @@ go build -o create-subnet .
 ```
 
 ## Usage
-export PLATFORM_CLI_KEY_PASSWORD=[YOUR_PASSWORD]
+export PLATFORM_CLI_KEY_PASSWORD=[WALLET_PASSWORD]
 
 Note:  by default, wallet stored in platform-cli keystore.  This wallet is password protected.
 

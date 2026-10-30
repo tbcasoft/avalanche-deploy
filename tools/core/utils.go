@@ -181,32 +181,34 @@ func FindGenesisFile() (string, error) {
 *
 ExtractEVMChainID returns the EVM chain ID from genesis config as a string.
 */
-func ExtractEVMChainID(genesisBytes []byte) string {
+func ExtractEVMChainID(genesisBytes []byte) (string, error) {
 	var parsed struct {
 		Config map[string]json.RawMessage `json:"config"`
 	}
 
 	if err := json.Unmarshal(genesisBytes, &parsed); err != nil || parsed.Config == nil {
-		return ""
+		return "", fmt.Errorf("Error:  unable to find \"config\" section within genesis file.")
 	}
 
 	rawChainID, ok := parsed.Config["chainId"]
 	if !ok || len(rawChainID) == 0 {
-		return ""
+		return "", fmt.Errorf("Error:  vallue for atribute \"chainId\" cannot be blank, i.e. the EVM unique id is wrong.")
 	}
 
 	// Try integer first (common case), then string fallback.
 	var numeric json.Number
 	if err := json.Unmarshal(rawChainID, &numeric); err == nil {
-		return numeric.String()
+		fmt.Printf("  The EVM unique id for your chain is %s\n", numeric.String())
+		return numeric.String(), nil
 	}
 
 	var str string
 	if err := json.Unmarshal(rawChainID, &str); err == nil {
-		return strings.TrimSpace(str)
+		fmt.Printf("  The EVM unique id for your chain is %s\n", strings.TrimSpace(str))
+		return strings.TrimSpace(str), nil
 	}
 
-	return ""
+	return "", fmt.Errorf("Error:  unable to derive the EVM unique id for you chain fromm the provided genesis file.")
 }
 
 func BuildNodeURI(endpoint string) (string, error) {
