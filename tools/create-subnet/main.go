@@ -63,7 +63,7 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("failed to create wallet: %w", err)
 	}
-	fmt.Printf("  Our P-chain Wallet (%s) loaded successfully\n", core.KeyName)
+	fmt.Printf("  Our P-chain Wallet (\"%s\") loaded successfully\n", core.KeyName)
 	fmt.Printf("  P-Chain Address: %s\n", ownerAddress)
 	fmt.Printf("  EVM Address:     %s\n", ethAddress)
 	fmt.Printf("  Required P-Chain balance: ~%.2f AVAX per validator\n", core.BalanceAVAX)
