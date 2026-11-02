@@ -76,7 +76,8 @@ flowchart TB
 brew install terraform ansible awscli jq go shellcheck
 
 # Or use make
-make setup
+# This will install all prerequisites (i.e. Terraform, Ansible, AWS CLI, jq, Go, shellcheck)
+make setup 
 ```
 
 ### 1. Configure AWS & SSH

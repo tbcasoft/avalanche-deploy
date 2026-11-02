@@ -100,7 +100,11 @@ func main() {
 	flag.Float64Var(&balanceAVAX, "validator-balance", 1.0, "Initial balance per validator in AVAX (supports decimals, e.g., 0.1)")
 	flag.BoolVar(&deployValidatorManager, "deploy-validator-manager", false, "Deploy ValidatorManager contracts (requires forge)")
 	flag.StringVar(&managerType, "manager-type", "poa", "Validator manager type: poa, native-staking, erc20-staking")
+	/**
+	* Path to the Avalanche Interchain Messaging (ICM, formerly Teleporter).  ICM is used for interchain communication.
+	 */
 	flag.StringVar(&contractsPath, "contracts-path", "", "Path to icm-contracts repository (or set ICM_CONTRACTS_PATH)")
+
 	flag.StringVar(&glacierAPIKey, "glacier-api-key", "", "Glacier API key for signature aggregation (or set GLACIER_API_KEY env)")
 	flag.BoolVar(&useLocalSigAgg, "local-sig-agg", false, "Use local signature-aggregator instead of Glacier API (for private L1s)")
 	flag.StringVar(&sigAggURL, "sig-agg-url", "", "URL of running signature-aggregator (e.g., http://localhost:8080)")
@@ -271,7 +275,10 @@ func run() error {
 	var managerAddress []byte
 	var vmDeployment *ValidatorManagerDeployment
 
-	// If genesis proxy address is provided, use it as the manager address
+	// If genesis proxy address is provided, use it as the manager address.
+	// If using Builder Hub to generate genesis.json and you enabled “Transparent Upgradable Proxy” option,
+	// you are pre deploying the validator proxy as part of genesis.
+	// The default proxy address defined within the config file is "0xfacade0000000000000000000000000000000000".
 	if genesisProxyAddress != "" {
 		fmt.Println("[4/N] Using genesis proxy address as ValidatorManager...")
 		// Parse the address

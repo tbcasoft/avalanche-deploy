@@ -19,16 +19,18 @@ import (
 )
 
 var (
-	NetworkName  string
-	SubnetIDStr  string
-	SubnetID     ids.ID
-	KeyName      string
-	OutputFile   string
-	ValidatorIPs string
-	GenesisFile  string
-	ChainName    string
-	BalanceAVAX  float64
-	RpcUrL       string
+	NetworkName            string
+	SubnetIDStr            string
+	SubnetID               ids.ID
+	KeyName                string
+	OutputFile             string
+	ValidatorIPs           string
+	GenesisFile            string
+	ChainName              string
+	BalanceAVAX            float64
+	RpcUrL                 string
+	GenesisProxyAddress    string
+	DeployValidatorManager bool
 )
 
 // GenesisConfig represents a simplified genesis file structure
