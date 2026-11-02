@@ -34,7 +34,9 @@ type ValidatorManagerDeployment struct {
 	StakingManager        string `json:"stakingManager,omitempty"`
 }
 
-// DeployValidatorManagerWithForge deploys the validator manager contracts using forge
+// DeployValidatorManagerWithForge deploys the validator manager contracts using Forge.
+//
+// Forge is an open source cmd line tool used to deploy smart contracts to the blockchain.
 func DeployValidatorManagerWithForge(
 	ctx context.Context,
 	rpcURL string,

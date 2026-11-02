@@ -58,12 +58,10 @@ func run() error {
 	// Get network configuration
 	networkID, rpcEndpoint, err := core.GetCustomNetworkConfig(core.NetworkName, core.RpcUrL)
 
-	fmt.Println("=== Create Chain ===")
+	fmt.Println("=== Create Chain Task ===")
 	fmt.Printf("Network:    %s (ID: %d)\n", core.NetworkName, networkID)
 	fmt.Printf("Chain Name: %s\n", core.ChainName)
 	fmt.Printf("Chain EVM unique ID: %s\n", evmChainID)
-
-	return nil
 
 	ctx := context.Background()
 
@@ -80,7 +78,7 @@ func run() error {
 
 	// Derive Ethereum address and check genesis funding
 	ethAddress := core.DeriveEthAddress(key)
-	funded, balance := core.CheckGenesisFunding(genesisBytes, ethAddress)
+	//No need to check genesis funding for a PoA base chain.
 
 	kc = secp256k1fx.NewKeychain(key)
 
@@ -102,15 +100,8 @@ func run() error {
 	fmt.Printf("  EVM Address:     %s\n", ethAddress)
 	fmt.Printf("  Required P-Chain balance: ~%.2f AVAX per validator\n", core.BalanceAVAX)
 
-	// Report genesis funding status
-	if funded {
-		fmt.Printf("  Genesis funding: ✓ (balance: %s)\n", balance)
-	} else {
-		fmt.Printf("  Genesis funding: ✗ (address not in genesis alloc)\n")
-		fmt.Println("  WARNING: Your EVM address is not funded in the selected genesis file")
-		fmt.Println("           This is acceptable for aProof of Authority, zero gas fee L1.")
-		fmt.Println("           In a PoA network, security is derived from corporate identity and legal reputation, not from locked financial capital (staking).")
-	}
+	// This is normally the check funding step (i.e "Report genesis funding status").  However, funding is not required for a Proof of Authority, zero gas fee L1.
+	// In a PoA network, security is derived from corporate identity and legal reputation, not from locked financial capital (staking).
 
 	var subnetID [32]byte
 	copy(subnetID[:], core.SubnetIDStr)
@@ -129,7 +120,8 @@ func run() error {
 		return fmt.Errorf("failed to create chain: %w", err)
 	}
 	chainID := chainTx.ID()
-	fmt.Printf("  Chain ID: %s\n", chainID)
+	fmt.Printf("  Chain created.  Txn ID: %s,  chain ID: %s\n", chainTx.TxID, chainID)
+	fmt.Println("**** Now setup the validators! ***")
 
 	return nil
 }
