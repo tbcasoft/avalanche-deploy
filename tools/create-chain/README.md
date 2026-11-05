@@ -5,7 +5,7 @@ CLI tool to create an Avalanche chain on Fuji or Mainnet.
 ## Prerequisites
 
 1. **Funded P-Chain Address**: You need a P-Chain address with AVAX
-    - This tool assummed wallet is stored in platform-cli keystore.
+    - This tool assumes wallet is stored in platform-cli keystore.
 2. **Existence of subnet+**
 
 ## Functionality
@@ -26,7 +26,7 @@ ubuntu@ip-10-8-3-214: /tbcasoft/avalanche-deploy-with-my-notes/tools/create-chai
 -chain-name="vdnL1a" \
 -genesis-file="/home/ubuntu/tbcasoft/Determined-Achiever-Chain-metadata/genesis.json" \
 -genesis-proxy-address="0xfacade0000000000000000000000000000000000" \
--deploy-validator-manager=true
+-output-file="create-chain"
 
 ## Post Steps
 1. **Setup validators+**

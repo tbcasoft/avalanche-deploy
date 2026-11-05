@@ -34,11 +34,10 @@ func main() {
 	flag.StringVar(&core.SubnetIDStr, "subnetidstr", "", "The container id of blockchain(s).")
 	flag.StringVar(&core.ChainName, "chain-name", "my-l1", "Name for the L1 chain")
 	flag.StringVar(&core.KeyName, "key-name", "", "Key name from platform-cli keystore (~/.platform/keys, preferred)")
-	flag.StringVar(&core.OutputFile, "output", "l1.env", "Output file for subnet/chain IDs")
 	flag.StringVar(&core.GenesisFile, "genesis-file", "", "Genesis file path (default: configs/l1/genesis/genesis.json in current or parent dirs)")
 	flag.Float64Var(&core.BalanceAVAX, "validator-balance", 1.0, "Initial balance per validator in AVAX (supports decimals, e.g., 0.1)")
 	flag.StringVar(&core.RpcUrL, "rpcurl", "", "Rpc node http endpoint.")
-	flag.StringVar(&core.OutputFile, "output", "create-chain", "Output from create-chain execution.  Don't include the suffix as -output.json will be added to the output file name.")
+	flag.StringVar(&core.OutputFile, "output-file", "create-chain", "Output from create-chain execution.  Don't include the suffix as -output.json will be added to the output file name.")
 	flag.Parse()
 
 	if err := run(); err != nil {
