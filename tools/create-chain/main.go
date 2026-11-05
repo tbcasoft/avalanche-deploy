@@ -2,15 +2,31 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/utils/constants"
 	"github.com/ava-labs/avalanchego/vms/secp256k1fx"
 	"github.com/ava-labs/avalanchego/wallet/subnet/primary"
 	"github.com/tbcasoft/avalanche-deploy/tools/core"
-	"os"
 )
+
+type CreatedChain struct {
+	TransactionId    string `json:"transaction-id"`
+	ChainName        string `json:"chain-name"`
+	ChainID          string `json:"chain-id"`
+	GenesisFile      string `json:"genesis-file"`
+	EvmChainID       string `json:"evm-chain-id"`
+	NetworkName      string `json:"network-name"`
+	RpcEndpoint      string `json:"rpc-endpoint"`
+	WalletName       string `json:"wallet-name"`
+	WalletEthAddress string `json:"wallet-eth-address"`
+}
 
 func main() {
 
@@ -22,6 +38,7 @@ func main() {
 	flag.StringVar(&core.GenesisFile, "genesis-file", "", "Genesis file path (default: configs/l1/genesis/genesis.json in current or parent dirs)")
 	flag.Float64Var(&core.BalanceAVAX, "validator-balance", 1.0, "Initial balance per validator in AVAX (supports decimals, e.g., 0.1)")
 	flag.StringVar(&core.RpcUrL, "rpcurl", "", "Rpc node http endpoint.")
+	flag.StringVar(&core.OutputFile, "output", "create-chain", "Output from create-chain execution.  Don't include the suffix as -output.json will be added to the output file name.")
 	flag.Parse()
 
 	if err := run(); err != nil {
@@ -33,10 +50,13 @@ func main() {
 func run() error {
 	var err error
 
+	createdChain := &CreatedChain{}
+
 	// Validate chain name (must be alphanumeric only)
 	if err = core.ValidateChainName(core.ChainName); err != nil {
 		return err
 	}
+	createdChain.ChainName = core.ChainName
 
 	// Resolve genesis file path
 	if core.GenesisFile == "" {
@@ -45,6 +65,8 @@ func run() error {
 			return fmt.Errorf("failed to find genesis file: %w", err)
 		}
 	}
+	createdChain.GenesisFile = core.GenesisFile
+
 	// Load genesis
 	genesisBytes, err := os.ReadFile(core.GenesisFile)
 	if err != nil {
@@ -54,9 +76,12 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("Error:  not able to dervie EVM Chain id from genesis file (%s), error: %v\n", core.GenesisFile, err)
 	}
+	createdChain.EvmChainID = evmChainID
 
 	// Get network configuration
 	networkID, rpcEndpoint, err := core.GetCustomNetworkConfig(core.NetworkName, core.RpcUrL)
+	createdChain.NetworkName = core.NetworkName
+	createdChain.RpcEndpoint = rpcEndpoint
 
 	fmt.Println("=== Create Chain Task ===")
 	fmt.Printf("Network:    %s (ID: %d)\n", core.NetworkName, networkID)
@@ -67,17 +92,19 @@ func run() error {
 
 	// Initialize keychain and wallet
 	var kc *secp256k1fx.Keychain
-	var ownerAddress ids.ShortID
+	var wallketPrivateKey ids.ShortID
 
 	fmt.Println("[1/4] Creating wallet...")
 	key, err := core.LoadPrivateKey(core.KeyName)
 	if err != nil {
 		return fmt.Errorf("failed to load private key: %w", err)
 	}
-	ownerAddress = key.Address()
+	wallketPrivateKey = key.Address()
+	createdChain.WalletName = core.KeyName
 
 	// Derive Ethereum address and check genesis funding
 	ethAddress := core.DeriveEthAddress(key)
+	createdChain.WalletEthAddress = ethAddress
 	//No need to check genesis funding for a PoA base chain.
 
 	kc = secp256k1fx.NewKeychain(key)
@@ -96,7 +123,7 @@ func run() error {
 		return fmt.Errorf("failed to create wallet: %w", err)
 	}
 	fmt.Printf("  Our P-chain Wallet (\"%s\") loaded successfully\n", core.KeyName)
-	fmt.Printf("  P-Chain Address: %s\n", ownerAddress)
+	fmt.Printf("  ******  TODO: is this the wallet's private key?   P-Chain Address: %s\n", wallketPrivateKey)
 	fmt.Printf("  EVM Address:     %s\n", ethAddress)
 	fmt.Printf("  Required P-Chain balance: ~%.2f AVAX per validator\n", core.BalanceAVAX)
 
@@ -120,8 +147,26 @@ func run() error {
 		return fmt.Errorf("failed to create chain: %w", err)
 	}
 	chainID := chainTx.ID()
+	createdChain.ChainID = chainID.String()
+	createdChain.TransactionId = chainTx.TxID.String()
 	fmt.Printf("  Chain created.  Txn ID: %s,  chain ID: %s\n", chainTx.TxID, chainID)
+
+	// Save deployment info
+	deploymentFile := strings.TrimSuffix(core.OutputFile, filepath.Ext(core.OutputFile)) + "-output.json"
+	if err := createdChain.SaveDeployment(deploymentFile); err != nil {
+		fmt.Printf("  Warning: failed to save deployment info: %v\n", err)
+	} else {
+		fmt.Printf("  Contract addresses saved to: %s\n", deploymentFile)
+	}
 	fmt.Println("**** Now setup the validators! ***")
 
 	return nil
+}
+
+func (d *CreatedChain) SaveDeployment(filepath string) error {
+	data, err := json.MarshalIndent(d, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath, data, 0644)
 }

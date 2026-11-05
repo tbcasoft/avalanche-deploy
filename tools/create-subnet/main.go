@@ -4,12 +4,13 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"os"
+	"time"
+
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/vms/secp256k1fx"
 	"github.com/ava-labs/avalanchego/wallet/subnet/primary"
 	"github.com/tbcasoft/avalanche-deploy/tools/core"
-	"os"
-	"time"
 )
 
 func main() {
@@ -38,11 +39,20 @@ func run() error {
 	fmt.Printf("Using RPC endpoint:    %s\n", rpcEndpoint)
 
 	fmt.Println("[1/2] Creating wallet...")
+	// Initialize keychain and wallet
+	var kc *secp256k1fx.Keychain
+	var walletPrivateKey ids.ShortID
+
 	key, err := core.LoadPrivateKey(core.KeyName) //load key from default keystore
 	if err != nil {
 		return fmt.Errorf("failed to load private key: %w", err)
 	}
-	ownerAddress := key.Address()
+	walletPrivateKey = key.Address()
+	ethAddress := core.DeriveEthAddress(key)
+
+	fmt.Printf("  Wallet loaded successfully\n")
+	fmt.Printf("  ******  TODO: is this the wallet's private key?   P-Chain Address: %s\n", walletPrivateKey)
+	fmt.Printf("  EVM Address:     %s\n", ethAddress)
 
 	// Derive Ethereum address and check genesis funding
 	ethAddress := core.DeriveEthAddress(key)
@@ -64,7 +74,7 @@ func run() error {
 		return fmt.Errorf("failed to create wallet: %w", err)
 	}
 	fmt.Printf("  Our P-chain Wallet (\"%s\") loaded successfully\n", core.KeyName)
-	fmt.Printf("  P-Chain Address: %s\n", ownerAddress)
+	fmt.Printf("  P-Chain Address: %s\n", walletPrivateKey)
 	fmt.Printf("  EVM Address:     %s\n", ethAddress)
 	fmt.Printf("  Required P-Chain balance: ~%.2f AVAX per validator\n", core.BalanceAVAX)
 
@@ -72,7 +82,7 @@ func run() error {
 	fmt.Println("[2/2] Creating subnet...")
 	owner := &secp256k1fx.OutputOwners{
 		Threshold: 1,
-		Addrs:     []ids.ShortID{ownerAddress},
+		Addrs:     []ids.ShortID{walletPrivateKey},
 	}
 
 	fmt.Println("  Building and issuing CreateSubnetTx...")
