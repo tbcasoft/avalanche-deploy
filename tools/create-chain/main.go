@@ -118,11 +118,17 @@ func run() error {
 	UTXO stands for Unspent Transaction Output. It is the accounting model used by cryptocurrencies like Bitcoin, Litecoin,
 	and parts of the Avalanche network (specifically the X-Chain and P-Chain) to track digital currency ownership and balance.
 	*/
-	config := primary.WalletConfig{SubnetIDs: []ids.ID{core.SubnetID}} //tells wallet to load metadata information for my subnet.
+	parsedSubnetID, err := ids.FromString(core.SubnetIDStr)
+	if err != nil {
+		return fmt.Errorf("Unable to covert sub id (str) %s to ids.ID object.  Error: %w", core.SubnetIDStr, err)
+	}
+	fmt.Printf("Configuring my wallet for subnet ID: %s\n", parsedSubnetID.String())
+	config := primary.WalletConfig{SubnetIDs: []ids.ID{parsedSubnetID}} //tells wallet to load metadata information for my subnet.
 	wallet, err := primary.MakePWallet(ctx, walletURI, kc, config)
 	if err != nil {
 		return fmt.Errorf("failed to create wallet: %w", err)
 	}
+	
 	fmt.Printf("  Our P-chain Wallet (\"%s\") loaded successfully\n", core.KeyName)
 	fmt.Printf("  ******  TODO: is this the wallet's private key?   P-Chain Address: %s\n", wallketPrivateKey)
 	fmt.Printf("  EVM Address:     %s\n", ethAddress)
