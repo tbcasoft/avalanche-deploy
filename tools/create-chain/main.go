@@ -122,13 +122,13 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("Unable to covert sub id (str) %s to ids.ID object.  Error: %w", core.SubnetIDStr, err)
 	}
-	fmt.Printf("Configuring my wallet for subnet ID: %s\n", parsedSubnetID.String())
+	fmt.Printf("Configuring my wallet for subnet ID: %s\n", parsedSubnetID)
 	config := primary.WalletConfig{SubnetIDs: []ids.ID{parsedSubnetID}} //tells wallet to load metadata information for my subnet.
 	wallet, err := primary.MakePWallet(ctx, walletURI, kc, config)
 	if err != nil {
 		return fmt.Errorf("failed to create wallet: %w", err)
 	}
-	
+
 	fmt.Printf("  Our P-chain Wallet (\"%s\") loaded successfully\n", core.KeyName)
 	fmt.Printf("  ******  TODO: is this the wallet's private key?   P-Chain Address: %s\n", wallketPrivateKey)
 	fmt.Printf("  EVM Address:     %s\n", ethAddress)

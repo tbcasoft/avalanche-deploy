@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/utils/crypto/secp256k1"
 	pkgkeystore "github.com/ava-labs/platform-cli/pkg/keystore"
 	"github.com/ava-labs/platform-cli/pkg/network"
@@ -22,7 +21,6 @@ import (
 var (
 	NetworkName            string
 	SubnetIDStr            string
-	SubnetID               ids.ID
 	KeyName                string
 	OutputFile             string
 	ValidatorIPs           string
