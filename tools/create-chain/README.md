@@ -24,8 +24,8 @@ ubuntu@ip-10-8-3-214: /tbcasoft/avalanche-deploy-with-my-notes/tools/create-chai
 -key-name=my-l1-key-admin-created-from-platform-cli \
 -subnetidstr="2MGNFLqeLP9EgHvLT2hfdKSvkLFwnGa1o7cDXPPcQQ88CB9C1v" \
 -chain-name="vdnL1a" \
--genesis-file="/home/ubuntu/tbcasoft/Determined-Achiever-Chain-metadata/genesis.json" \
--genesis-proxy-address="0xfacade0000000000000000000000000000000000" \
+-rpcurl=http://18.219.181.165:9650 \
+-genesis-file="/home/ubuntu/tbcasoft/vdnL1a-chain-metadata/genesis.json" \
 -output-file="create-chain"
 
 ## Post Steps

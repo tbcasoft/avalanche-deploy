@@ -36,7 +36,7 @@ func main() {
 	flag.StringVar(&core.KeyName, "key-name", "", "Key name from platform-cli keystore (~/.platform/keys, preferred)")
 	flag.StringVar(&core.GenesisFile, "genesis-file", "", "Genesis file path (default: configs/l1/genesis/genesis.json in current or parent dirs)")
 	flag.Float64Var(&core.BalanceAVAX, "validator-balance", 1.0, "Initial balance per validator in AVAX (supports decimals, e.g., 0.1)")
-	flag.StringVar(&core.RpcUrL, "rpcurl", "", "Rpc node http endpoint.")
+	flag.StringVar(&core.RpcUrL, "rpcurl", "", "Rpc node http endpoint (e.g. http://18.219.181.165:9650)")
 	flag.StringVar(&core.OutputFile, "output-file", "create-chain", "Output from create-chain execution.  Don't include the suffix as -output.json will be added to the output file name.")
 	flag.Parse()
 
@@ -86,6 +86,7 @@ func run() error {
 	fmt.Printf("Network:    %s (ID: %d)\n", core.NetworkName, networkID)
 	fmt.Printf("Chain Name: %s\n", core.ChainName)
 	fmt.Printf("Chain EVM unique ID: %s\n", evmChainID)
+	fmt.Printf("RPC endpoint: %s\n", rpcEndpoint)
 
 	ctx := context.Background()
 
