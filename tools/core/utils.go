@@ -4,6 +4,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"net"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/utils/crypto/secp256k1"
 	pkgkeystore "github.com/ava-labs/platform-cli/pkg/keystore"
@@ -11,11 +17,6 @@ import (
 	pkgwallet "github.com/ava-labs/platform-cli/pkg/wallet"
 	dcrsecp "github.com/decred/dcrd/dcrec/secp256k1/v4"
 	"golang.org/x/crypto/sha3"
-	"net"
-	"os"
-	"path/filepath"
-	"strings"
-	"time"
 )
 
 var (
@@ -31,6 +32,8 @@ var (
 	RpcUrL                 string
 	GenesisProxyAddress    string
 	DeployValidatorManager bool
+	ContractsPath          string
+	ManagerType            string
 )
 
 // GenesisConfig represents a simplified genesis file structure
@@ -213,6 +216,9 @@ func ExtractEVMChainID(genesisBytes []byte) (string, error) {
 	return "", fmt.Errorf("Error:  unable to derive the EVM unique id for you chain fromm the provided genesis file.")
 }
 
+// BuildNodeURI returns validator endpoint as http://host:9650.
+//
+// Input endpoint should not contain the protocol (i.e. http or https).  Rather the endpoint format should b host:port.
 func BuildNodeURI(endpoint string) (string, error) {
 	endpoint = strings.TrimSpace(endpoint)
 	if endpoint == "" {

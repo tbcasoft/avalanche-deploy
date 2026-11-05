@@ -34,9 +34,21 @@ type ValidatorManagerDeployment struct {
 	StakingManager        string `json:"stakingManager,omitempty"`
 }
 
-// DeployValidatorManagerWithForge deploys the validator manager contracts using Forge.
+// DeployValidatorManagerWithForge deploys the validator manager contracts using Forge.  Specifically, it will do the following:
+//   - Determine the path containing the smart contracts to be deployed.
+//   - Using "forge", deploy the Validator Manager smart contract implementation.
+//   - Using "forge", deploy the Validator Manager proxy smart contract.
+//   - Using "forge", initialize the validator manager.
+//   - Using "forge, deploy icm-contracts/avalanche/validator-manager/PoAManager.sol
 //
 // Forge is an open source cmd line tool used to deploy smart contracts to the blockchain.
+//
+// Explanation of args:
+//
+//	ownerAddress - your wallet's shorten (20 bytes) private key which is allowed to deploy smart contracts.
+//	privateKey - your wallet's private key which is allowed to deploy smart contracts.
+//	validator manager type of "poa", "native-staking", or "erc20-staking".  If "poa", this function will deploy the PoAManager smart contract.
+//	rpc node endpoint used
 func DeployValidatorManagerWithForge(
 	ctx context.Context,
 	rpcURL string,
@@ -77,14 +89,14 @@ func DeployValidatorManagerWithForge(
 		}
 	}
 
-	fmt.Printf("  Using contracts from: %s\n", icmContractsPath)
+	fmt.Printf(" Using path %s for contracts to be deploy.\n", icmContractsPath)
 
 	deployment := &ValidatorManagerDeployment{}
 
 	// Step 1: Deploy ValidatorManager implementation
 	fmt.Println("  Deploying ValidatorManager implementation...")
 	vmImplAddr, err := forgeCreate(ctx, icmContractsPath, rpcURL, privateKey,
-		"icm-contracts/avalanche/validator-manager/ValidatorManager.sol:ValidatorManager",
+		"icm-contracts/avalanche/validator-manager/ValidatorManager.sol:ValidatorManager", //actual solidity code, relative to core.ContractsPath
 		"--constructor-args", "0") // ICMInitializable.Allowed = 0
 	if err != nil {
 		return nil, fmt.Errorf("failed to deploy ValidatorManager: %w", err)
@@ -113,8 +125,6 @@ func DeployValidatorManagerWithForge(
 
 	// Step 3: Initialize ValidatorManager
 	fmt.Println("  Initializing ValidatorManager...")
-	// Encode the settings struct for initialize call
-	// ValidatorManagerSettings(address admin, bytes32 subnetID, uint64 churnPeriodSeconds, uint8 maximumChurnPercentage)
 	subnetIDHex := "0x" + hex.EncodeToString(subnetID[:])
 	initCalldata := encodeValidatorManagerInit(ownerAddress, subnetIDHex, 0, 20)
 
@@ -153,7 +163,9 @@ func DeployValidatorManagerWithForge(
 	return deployment, nil
 }
 
-// forgeCreate deploys a contract using forge create
+// forgeCreate deploys a contract using "forge create" command.
+// rpcURL encapsulates the blockchain network destination of the smart contract.
+// privateKey - the wallet private key use to sign the transaction.
 func forgeCreate(ctx context.Context, workDir, rpcURL, privateKey, contract string, args ...string) (string, error) {
 	cmdArgs := []string{
 		"create",
@@ -212,7 +224,9 @@ func forgeSend(ctx context.Context, workDir, rpcURL, privateKey, to, calldata st
 	return string(output), nil
 }
 
-// encodeValidatorManagerInit encodes the initialize call for ValidatorManager
+// encodeValidatorManagerInit encodes the call for ValidatorManager::initialize().
+//
+//	Note:  this does not add any node as validator; rather, it performs admin type of actions (e.g. the subnet for the smart contract, the admin of contract).
 func encodeValidatorManagerInit(admin, subnetID string, churnPeriodSeconds uint64, maxChurnPercentage uint8) string {
 	// function initialize(ValidatorManagerSettings calldata settings)
 	// struct ValidatorManagerSettings { address admin; bytes32 subnetID; uint64 churnPeriodSeconds; uint8 maximumChurnPercentage; }
