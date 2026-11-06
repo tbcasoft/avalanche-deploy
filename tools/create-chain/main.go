@@ -137,14 +137,10 @@ func run() error {
 	// This is normally the check funding step (i.e "Report genesis funding status").  However, funding is not required for a Proof of Authority, zero gas fee L1.
 	// In a PoA network, security is derived from corporate identity and legal reputation, not from locked financial capital (staking).
 
-	var subnetID [32]byte
-	copy(subnetID[:], core.SubnetIDStr)
-	fmt.Printf("Subnet id: %s\n", subnetID)
-
 	// Create chain
 	fmt.Println("[3/4] Creating chain...")
 	chainTx, err := wallet.IssueCreateChainTx(
-		subnetID,
+		parsedSubnetID,
 		genesisBytes,
 		constants.SubnetEVMID,
 		nil,
