@@ -41,24 +41,20 @@ func run() error {
 	fmt.Println("[1/2] Creating wallet...")
 	// Initialize keychain and wallet
 	var kc *secp256k1fx.Keychain
-	var walletPrivateKey ids.ShortID
+	var ownerAddress ids.ShortID
 
 	key, err := core.LoadPrivateKey(core.KeyName) //load key from default keystore
 	if err != nil {
 		return fmt.Errorf("failed to load private key: %w", err)
 	}
-	walletPrivateKey = key.Address()
+	ownerAddress = core.DeriveAvalancheAddressIdentifier(key)
 	ethAddress := core.DeriveEthAddress(key)
 
-	fmt.Printf("  Wallet loaded successfully\n")
-	fmt.Printf("  ******  TODO: is this the wallet's private key?   P-Chain Address: %s\n", walletPrivateKey)
-	fmt.Printf("  EVM Address:     %s\n", ethAddress)
+	fmt.Printf("  Wallet (%s) loaded successfully from keystore.\n", core.KeyName)
 
-	// Derive Ethereum address and check genesis funding
-	ethAddress := core.DeriveEthAddress(key)
 	//No need to check genesis funding for a PoA base chain.
 
-	kc := secp256k1fx.NewKeychain(key)
+	kc = secp256k1fx.NewKeychain(key)
 
 	// Use public API for wallet/transactions since validator nodes may not be connected yet
 	walletURI := rpcEndpoint
@@ -73,16 +69,18 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("failed to create wallet: %w", err)
 	}
-	fmt.Printf("  Our P-chain Wallet (\"%s\") loaded successfully\n", core.KeyName)
-	fmt.Printf("  P-Chain Address: %s\n", walletPrivateKey)
-	fmt.Printf("  EVM Address:     %s\n", ethAddress)
+
+	fmt.Printf("  Our Wallet (\"%s\") loaded successfully\n", core.KeyName)
+	fmt.Printf("  Wallet's Avalanche Address Identifier (i.e. to be used as the \"owner\" of subnet): %s\n", ownerAddress)
+	fmt.Printf("  Wallet's P-chain address: %s\n", core.DerivePChainAddress(key))
+	fmt.Printf("  EVM (C-chain) Address:     %s\n", ethAddress)
 	fmt.Printf("  Required P-Chain balance: ~%.2f AVAX per validator\n", core.BalanceAVAX)
 
 	// Create subnet
 	fmt.Println("[2/2] Creating subnet...")
 	owner := &secp256k1fx.OutputOwners{
 		Threshold: 1,
-		Addrs:     []ids.ShortID{walletPrivateKey},
+		Addrs:     []ids.ShortID{ownerAddress},
 	}
 
 	fmt.Println("  Building and issuing CreateSubnetTx...")

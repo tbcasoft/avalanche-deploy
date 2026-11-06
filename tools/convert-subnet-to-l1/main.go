@@ -46,23 +46,32 @@ func main() {
 
 func run() error {
 
-	var subnetID [32]byte
-	copy(subnetID[:], core.SubnetIDStr)
-	fmt.Printf("Subnet id: %s\n", subnetID)
+	/**
+	Avalanche IDs are Base58-encoded strings, not raw byte strings. Always use ids.FromString() rather than copy() when converting them.
+	*/
+	parsedSubnetID, err := ids.FromString(core.SubnetIDStr)
+	if err != nil {
+		return fmt.Errorf("Unable to covert sub id (str) %s to ids.ID object.  Error: %w", core.SubnetIDStr, err)
+	}
+	fmt.Printf("Subnet ID: %s\n", parsedSubnetID)
+	parsedChainID, err := core.FromStringToChainID(core.ChainIDStr)
+	if err != nil {
+		return fmt.Errorf("invalid chain ID: %w", err)
+	}
 
 	// Initialize keychain and wallet.  The wallet should be part of the "Contract Deployer Allowlist" of the chain's genesis.json.
 	// The wallet's private key is used to deploy the validator manager smart contract to your chain.
 
 	fmt.Println("[1/4] Creating wallet.  The wallet's private key is used to deploy the validator manager smart contract to your chain.")
 	var kc *secp256k1fx.Keychain
-	var walletPrivateKey ids.ShortID
+	var ownerAddress ids.ShortID
 	fmt.Println("[1/4] Creating wallet...")
 	key, err := core.LoadPrivateKey(core.KeyName)
 	if err != nil {
 		return fmt.Errorf("failed to load private key: %w", err)
 	}
 
-	walletPrivateKey = key.Address()
+	ownerAddress = core.DeriveAvalancheAddressIdentifier(key)
 	ethAddress := core.DeriveEthAddress(key)
 	//No need to check genesis funding for a PoA base chain.
 
@@ -70,9 +79,10 @@ func run() error {
 	keyBytes := key.Bytes()
 	privateKeyHex := "0x" + fmt.Sprintf("%x", keyBytes)
 
-	fmt.Printf("  Wallet loaded successfully\n")
-	fmt.Printf("  ******  TODO: is this the wallet's private key?   P-Chain Address: %s\n", walletPrivateKey)
-	fmt.Printf("  EVM Address:     %s\n", ethAddress)
+	fmt.Printf("  Our Wallet (\"%s\") loaded successfully\n", core.KeyName)
+	fmt.Printf("  Wallet's Avalanche Address Identifier (i.e. to be used as the \"owner\" of subnet): %s\n", ownerAddress)
+	fmt.Printf("  Wallet's P-chain address: %s\n", core.DerivePChainAddress(key))
+	fmt.Printf("  EVM (C-chain) Address:     %s\n", ethAddress)
 
 	// Parse validator IPs.  At least one validator is needed to deploy validator manager.
 	ips, err := core.ParseValidatorIPs(core.ValidatorIPs)
@@ -130,7 +140,7 @@ func run() error {
 		time.Sleep(15 * time.Second)
 
 		// Build the chain RPC URL
-		chainRPCURL := fmt.Sprintf("%s/ext/bc/%s/rpc", strings.TrimRight(nodeURIs[0], "/"), chainID)
+		chainRPCURL := fmt.Sprintf("%s/ext/bc/%s/rpc", strings.TrimRight(nodeURIs[0], "/"), parsedChainID)
 		fmt.Printf("  The chain RPC used when deploying the smart contracts: %s\n", chainRPCURL)
 
 		// Parse manager type, defaults to poa
@@ -150,8 +160,8 @@ func run() error {
 			ctx,
 			chainRPCURL,
 			privateKeyHex,
-			subnetID,
-			walletPrivateKey.String(),
+			parsedSubnetID,
+			ownerAddress.String(),
 			vmType,
 			core.ContractsPath,
 		)

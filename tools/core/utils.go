@@ -10,7 +10,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/utils/crypto/secp256k1"
+	"github.com/ava-labs/avalanchego/utils/formatting/address"
 	pkgkeystore "github.com/ava-labs/platform-cli/pkg/keystore"
 	"github.com/ava-labs/platform-cli/pkg/network"
 	pkgwallet "github.com/ava-labs/platform-cli/pkg/wallet"
@@ -328,7 +330,7 @@ func ClearBytes(b []byte) {
 
 // DeriveEthAddress gets the EVM address of the wallet's public key.
 //
-// EVM address is also known as the P-chain address.
+// EVM address is also known as the C-chain address.
 func DeriveEthAddress(key *secp256k1.PrivateKey) string {
 	pubKey, err := dcrsecp.ParsePubKey(key.PublicKey().Bytes())
 	if err != nil {
@@ -367,4 +369,54 @@ func CheckGenesisFunding(genesisBytes []byte, address string) (bool, string) {
 	}
 
 	return false, ""
+}
+
+// DeriveAvalancheAddressIdentifier derives the address which will be use as the owner of a subnet.
+// It returns the underlying address bytes, not the complete P-fuji1... string.
+//
+// "key" is the private loaded from the keystore.
+//
+// Algorithm used to derive owner address:
+//  1. Obtain the wallet's secp256k1 public key.
+//  2. Compute the hash used by AvalancheGo's address derivation.
+//     3.Take the resulting 20-byte identifier (ids.ShortID).
+func DeriveAvalancheAddressIdentifier(key *secp256k1.PrivateKey) ids.ShortID {
+	ownerAddress := key.Address()
+	return ownerAddress
+}
+
+// DerivePChainAddress returns the P-chain address from the wallet's public key.
+//
+// The derivation is:
+//  1. Take the 33-byte compressed public key.
+//  2. Calculate SHA256(publicKey).
+//  3. Calculate RIPEMD160 of that SHA-256 hash to get the 20-byte ids.ShortID.
+//  4. Encode those 20 bytes using Bech32, with the Fuji HRP (fuji).
+//  5. Add the P- chain prefix.
+func DerivePChainAddress(key *secp256k1.PrivateKey) (string, error) {
+	shortID := key.PublicKey().Address()
+	pChainAddress, err := address.Format(
+		"P",
+		"fuji",
+		shortID[:],
+	)
+	if err != nil {
+		return "", err
+	}
+
+	return pChainAddress, nil
+}
+
+// FromStringToSubnetID converts a subnet id string to Avalanche Base58-encoded.
+//
+// Avalanche IDs are Base58-encoded strings, not raw byte strings. Always use this method rather than copy() when converting them.
+func FromStringToSubnetID(s string) (ids.ID, error) {
+	return ids.FromString(s)
+}
+
+// FromStringToChainID converts a chain id string to Avalanche Base58-encoded.
+//
+// Avalanche IDs are Base58-encoded strings, not raw byte strings. Always use this method rather than copy() when converting them.
+func FromStringToChainID(s string) (ids.ID, error) {
+	return ids.FromString(s)
 }

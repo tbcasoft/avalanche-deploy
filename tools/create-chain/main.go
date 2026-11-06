@@ -25,7 +25,7 @@ type CreatedChain struct {
 	NetworkName      string `json:"network-name"`
 	RpcEndpoint      string `json:"rpc-endpoint"`
 	WalletName       string `json:"wallet-name"`
-	WalletEthAddress string `json:"wallet-eth-address"`
+	WalletEthAddress string `json:"wallet-eth-address-also-known-as-chain-address"`
 }
 
 func main() {
@@ -92,17 +92,17 @@ func run() error {
 
 	// Initialize keychain and wallet
 	var kc *secp256k1fx.Keychain
-	var wallketPrivateKey ids.ShortID
+	var ownerAddress ids.ShortID
 
 	fmt.Println("[1/4] Creating wallet...")
 	key, err := core.LoadPrivateKey(core.KeyName)
 	if err != nil {
 		return fmt.Errorf("failed to load private key: %w", err)
 	}
-	wallketPrivateKey = key.Address()
+	ownerAddress = core.DeriveAvalancheAddressIdentifier(key)
 	createdChain.WalletName = core.KeyName
 
-	// Derive Ethereum address and check genesis funding
+	// Derive Ethereum address (also known as the wallet's c-chain address) and check genesis funding
 	ethAddress := core.DeriveEthAddress(key)
 	createdChain.WalletEthAddress = ethAddress
 	//No need to check genesis funding for a PoA base chain.
@@ -112,27 +112,28 @@ func run() error {
 	// Use public API for wallet/transactions since validator nodes may not be connected yet
 	walletURI := rpcEndpoint
 
+	parsedSubnetID, err := core.FromStringToSubnetID(core.SubnetIDStr)
+	if err != nil {
+		return fmt.Errorf("Unable to covert sub id (str) %s to ids.ID object.  Error: %w", core.SubnetIDStr, err)
+	}
+	fmt.Printf("Configuring my wallet for subnet ID: %s\n", parsedSubnetID)
+
 	/**
 	Get the P-chain wallet used to pay for transactions.
 
 	UTXO stands for Unspent Transaction Output. It is the accounting model used by cryptocurrencies like Bitcoin, Litecoin,
 	and parts of the Avalanche network (specifically the X-Chain and P-Chain) to track digital currency ownership and balance.
 	*/
-	parsedSubnetID, err := ids.FromString(core.SubnetIDStr)
-	if err != nil {
-		return fmt.Errorf("Unable to covert sub id (str) %s to ids.ID object.  Error: %w", core.SubnetIDStr, err)
-	}
-	fmt.Printf("Configuring my wallet for subnet ID: %s\n", parsedSubnetID)
 	config := primary.WalletConfig{SubnetIDs: []ids.ID{parsedSubnetID}} //tells wallet to load metadata information for my subnet.
 	wallet, err := primary.MakePWallet(ctx, walletURI, kc, config)
 	if err != nil {
 		return fmt.Errorf("failed to create wallet: %w", err)
 	}
 
-	fmt.Printf("  Our P-chain Wallet (\"%s\") loaded successfully\n", core.KeyName)
-	fmt.Printf("  ******  TODO: is this the wallet's private key?   P-Chain Address: %s\n", wallketPrivateKey)
-	fmt.Printf("  EVM Address:     %s\n", ethAddress)
-	fmt.Printf("  Required P-Chain balance: ~%.2f AVAX per validator\n", core.BalanceAVAX)
+	fmt.Printf("  Our Wallet (\"%s\") loaded successfully\n", core.KeyName)
+	fmt.Printf("  Wallet's Avalanche Address Identifier (i.e. to be used as the \"owner\" of subnet): %s\n", ownerAddress)
+	fmt.Printf("  Wallet's P-chain address: %s\n", core.DerivePChainAddress(key))
+	fmt.Printf("  EVM (C-chain) Address:     %s\n", ethAddress)
 
 	// This is normally the check funding step (i.e "Report genesis funding status").  However, funding is not required for a Proof of Authority, zero gas fee L1.
 	// In a PoA network, security is derived from corporate identity and legal reputation, not from locked financial capital (staking).
