@@ -10,15 +10,15 @@ import (
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/vms/secp256k1fx"
 	"github.com/ava-labs/avalanchego/wallet/subnet/primary"
-	"github.com/tbcasoft/avalanche-deploy/tools/core"
+	"github.com/tbcasoft/avalanche-deploy/tools/core/helpers"
 )
 
 func main() {
 
-	flag.StringVar(&core.NetworkName, "network", "fuji", "Network: fuji or mainnet")
-	flag.StringVar(&core.KeyName, "key-name", "", "Key name from platform-cli keystore (~/.platform/keys, preferred)")
-	flag.StringVar(&core.OutputFile, "output", "l1.env", "Output file for subnet/chain IDs")
-	flag.StringVar(&core.RpcUrL, "rpcurl", "", "Rpc node http endpoint.")
+	flag.StringVar(&helpers.NetworkName, "network", "fuji", "Network: fuji or mainnet")
+	flag.StringVar(&helpers.KeyName, "key-name", "", "Key name from platform-cli keystore (~/.platform/keys, preferred)")
+	flag.StringVar(&helpers.OutputFile, "output", "l1.env", "Output file for subnet/chain IDs")
+	flag.StringVar(&helpers.RpcUrL, "rpcurl", "", "Rpc node http endpoint.")
 	flag.Parse()
 
 	if err := run(); err != nil {
@@ -32,10 +32,10 @@ func run() error {
 	ctx := context.Background()
 
 	// Get network configuration
-	networkID, rpcEndpoint, err := core.GetCustomNetworkConfig(core.NetworkName, core.RpcUrL)
+	networkID, rpcEndpoint, err := helpers.GetCustomNetworkConfig(helpers.NetworkName, helpers.RpcUrL)
 
 	fmt.Println("=== Create Subnet ===")
-	fmt.Printf("Network:    %s (ID: %d)\n", core.NetworkName, networkID)
+	fmt.Printf("Network:    %s (ID: %d)\n", helpers.NetworkName, networkID)
 	fmt.Printf("Using RPC endpoint:    %s\n", rpcEndpoint)
 
 	fmt.Println("[1/2] Creating wallet...")
@@ -43,14 +43,14 @@ func run() error {
 	var kc *secp256k1fx.Keychain
 	var ownerAddress ids.ShortID
 
-	key, err := core.LoadPrivateKey(core.KeyName) //load key from default keystore
+	key, err := helpers.LoadPrivateKey(helpers.KeyName) //load key from default keystore
 	if err != nil {
 		return fmt.Errorf("failed to load private key: %w", err)
 	}
-	ownerAddress = core.DeriveAvalancheAddressIdentifier(key)
-	ethAddress := core.DeriveEthAddress(key)
+	ownerAddress = helpers.DeriveAvalancheAddressIdentifier(key)
+	ethAddress := helpers.DeriveEthAddress(key)
 
-	fmt.Printf("  Wallet (%s) loaded successfully from keystore.\n", core.KeyName)
+	fmt.Printf("  Wallet (%s) loaded successfully from keystore.\n", helpers.KeyName)
 
 	//No need to check genesis funding for a PoA base chain.
 
@@ -70,11 +70,11 @@ func run() error {
 		return fmt.Errorf("failed to create wallet: %w", err)
 	}
 
-	fmt.Printf("  Our Wallet (\"%s\") loaded successfully\n", core.KeyName)
+	fmt.Printf("  Our Wallet (\"%s\") loaded successfully\n", helpers.KeyName)
 	fmt.Printf("  Wallet's Avalanche Address Identifier (i.e. to be used as the \"owner\" of subnet): %s\n", ownerAddress)
-	fmt.Printf("  Wallet's P-chain address: %s\n", core.DerivePChainAddress(key))
+	fmt.Printf("  Wallet's P-chain address: %s\n", helpers.DerivePChainAddress(key))
 	fmt.Printf("  EVM (C-chain) Address:     %s\n", ethAddress)
-	fmt.Printf("  Required P-Chain balance: ~%.2f AVAX per validator\n", core.BalanceAVAX)
+	fmt.Printf("  Required P-Chain balance: ~%.2f AVAX per validator\n", helpers.BalanceAVAX)
 
 	// Create subnet
 	fmt.Println("[2/2] Creating subnet...")

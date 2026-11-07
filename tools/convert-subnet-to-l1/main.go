@@ -12,19 +12,18 @@ import (
 
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/vms/secp256k1fx"
-	"github.com/tbcasoft/avalanche-deploy/tools/core"
-	l1 "github.com/tbcasoft/avalanche-deploy/tools/create-l1"
+	"github.com/tbcasoft/avalanche-deploy/tools/core/helpers"
 )
 
 func main() {
 
-	flag.StringVar(&core.SubnetIDStr, "subnetidstr", "", "The container id of blockchain(s).")
-	flag.StringVar(&core.GenesisProxyAddress, "genesis-proxy-address", "", "Use existing proxy address from genesis (e.g., 0xfacade0000000000000000000000000000000000)")
-	flag.StringVar(&core.KeyName, "key-name", "", "Key name from platform-cli keystore (~/.platform/keys, preferred)")
-	flag.BoolVar(&core.DeployValidatorManager, "deploy-validator-manager", false, "Deploy ValidatorManager contracts (requires forge)")
-	flag.StringVar(&core.ValidatorIPs, "validators", "", "Comma-separated validators.  Format is host:port, don't include the protocol (i.e. http and https)")
-	flag.StringVar(&core.ManagerType, "manager-type", "poa", "Validator manager type: poa, native-staking, erc20-staking")
-	flag.StringVar(&core.OutputFile, "output", "l1.env", "Convert subnet to L1 output file.  Don't include the suffix as -output.json will be added to the output file name.")
+	flag.StringVar(&helpers.SubnetIDStr, "subnetidstr", "", "The container id of blockchain(s).")
+	flag.StringVar(&helpers.GenesisProxyAddress, "genesis-proxy-address", "", "Use existing proxy address from genesis (e.g., 0xfacade0000000000000000000000000000000000)")
+	flag.StringVar(&helpers.KeyName, "key-name", "", "Key name from platform-cli keystore (~/.platform/keys, preferred)")
+	flag.BoolVar(&helpers.DeployValidatorManager, "deploy-validator-manager", false, "Deploy ValidatorManager contracts (requires forge)")
+	flag.StringVar(&helpers.ValidatorIPs, "validators", "", "Comma-separated validators.  Format is host:port, don't include the protocol (i.e. http and https)")
+	flag.StringVar(&helpers.ManagerType, "manager-type", "poa", "Validator manager type: poa, native-staking, erc20-staking")
+	flag.StringVar(&helpers.OutputFile, "output", "l1.env", "Convert subnet to L1 output file.  Don't include the suffix as -output.json will be added to the output file name.")
 	/**
 	* Path to the Avalanche Interchain Messaging (ICM, formerly Teleporter).  ICM is used for interchain communication.
 	* The repository is https://github.com/ava-labs/icm-services.  Note: the tools just want the parent directory to icm-contracts.
@@ -35,7 +34,7 @@ func main() {
 	*	contracts/validator-manager/ -- L1 validator management
 	*	contracts/governance/ --  L1 governance
 	 */
-	flag.StringVar(&core.ContractsPath, "contracts-path", "", "Path to icm-contracts repository (or set ICM_CONTRACTS_PATH)")
+	flag.StringVar(&helpers.ContractsPath, "contracts-path", "", "Path to icm-contracts repository (or set ICM_CONTRACTS_PATH)")
 
 	if err := run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -49,12 +48,12 @@ func run() error {
 	/**
 	Avalanche IDs are Base58-encoded strings, not raw byte strings. Always use ids.FromString() rather than copy() when converting them.
 	*/
-	parsedSubnetID, err := ids.FromString(core.SubnetIDStr)
+	parsedSubnetID, err := ids.FromString(helpers.SubnetIDStr)
 	if err != nil {
-		return fmt.Errorf("Unable to covert sub id (str) %s to ids.ID object.  Error: %w", core.SubnetIDStr, err)
+		return fmt.Errorf("Unable to covert sub id (str) %s to ids.ID object.  Error: %w", helpers.SubnetIDStr, err)
 	}
 	fmt.Printf("Subnet ID: %s\n", parsedSubnetID)
-	parsedChainID, err := core.FromStringToChainID(core.ChainIDStr)
+	parsedChainID, err := helpers.FromStringToChainID(helpers.ChainIDStr)
 	if err != nil {
 		return fmt.Errorf("invalid chain ID: %w", err)
 	}
@@ -66,26 +65,26 @@ func run() error {
 	var kc *secp256k1fx.Keychain
 	var ownerAddress ids.ShortID
 	fmt.Println("[1/4] Creating wallet...")
-	key, err := core.LoadPrivateKey(core.KeyName)
+	key, err := helpers.LoadPrivateKey(helpers.KeyName)
 	if err != nil {
 		return fmt.Errorf("failed to load private key: %w", err)
 	}
 
-	ownerAddress = core.DeriveAvalancheAddressIdentifier(key)
-	ethAddress := core.DeriveEthAddress(key)
+	ownerAddress = helpers.DeriveAvalancheAddressIdentifier(key)
+	ethAddress := helpers.DeriveEthAddress(key)
 	//No need to check genesis funding for a PoA base chain.
 
 	// Get the private key hex for forge when deploying validator manager smart contract.
 	keyBytes := key.Bytes()
 	privateKeyHex := "0x" + fmt.Sprintf("%x", keyBytes)
 
-	fmt.Printf("  Our Wallet (\"%s\") loaded successfully\n", core.KeyName)
+	fmt.Printf("  Our Wallet (\"%s\") loaded successfully\n", helpers.KeyName)
 	fmt.Printf("  Wallet's Avalanche Address Identifier (i.e. to be used as the \"owner\" of subnet): %s\n", ownerAddress)
-	fmt.Printf("  Wallet's P-chain address: %s\n", core.DerivePChainAddress(key))
+	fmt.Printf("  Wallet's P-chain address: %s\n", helpers.DerivePChainAddress(key))
 	fmt.Printf("  EVM (C-chain) Address:     %s\n", ethAddress)
 
 	// Parse validator IPs.  At least one validator is needed to deploy validator manager.
-	ips, err := core.ParseValidatorIPs(core.ValidatorIPs)
+	ips, err := helpers.ParseValidatorIPs(helpers.ValidatorIPs)
 	if err != nil {
 		return fmt.Errorf("failed to parse validator IPs: %w", err)
 	}
@@ -103,7 +102,7 @@ func run() error {
 	fmt.Println("[1/4] Build node URIs from validator endpoints.")
 	nodeURIs := make([]string, len(ips)) //node array will be in format of http://host:port
 	for i, endpoint := range ips {
-		nodeURI, err := core.BuildNodeURI(endpoint)
+		nodeURI, err := helpers.BuildNodeURI(endpoint)
 		if err != nil {
 			return fmt.Errorf("invalid validator endpoint %q: %w", endpoint, err)
 		}
@@ -117,12 +116,12 @@ func run() error {
 	// If using Builder Hub to generate genesis.json and you enabled “Transparent Upgradable Proxy” option,
 	// you are pre deploying the validator proxy as part of genesis.
 	// The default proxy address defined within the config file is "0xfacade0000000000000000000000000000000000".
-	if core.GenesisProxyAddress != "" {
+	if helpers.GenesisProxyAddress != "" {
 		fmt.Println("[4/N] Using genesis proxy address as ValidatorManager...")
 		// Parse the address
-		addrStr := strings.TrimPrefix(core.GenesisProxyAddress, "0x")
+		addrStr := strings.TrimPrefix(helpers.GenesisProxyAddress, "0x")
 		if len(addrStr) != 40 {
-			return fmt.Errorf("you passed an invalid genesis proxy address: %s (expected 40 hex chars)", core.GenesisProxyAddress)
+			return fmt.Errorf("you passed an invalid genesis proxy address: %s (expected 40 hex chars)", helpers.GenesisProxyAddress)
 		}
 		addrBytes, err := hex.DecodeString(addrStr)
 		if err != nil {
@@ -132,7 +131,7 @@ func run() error {
 		fmt.Printf("  Proxy Address: 0x%s\n", addrStr)
 		fmt.Println("  NOTE: You must deploy the ValidatorManager implementation and upgrade the proxy AFTER L1 conversion")
 	}
-	if core.DeployValidatorManager {
+	if helpers.DeployValidatorManager {
 		fmt.Println("[4/6] Deploying ValidatorManager contracts...")
 
 		// Wait for chain RPC to be ready
@@ -144,26 +143,26 @@ func run() error {
 		fmt.Printf("  The chain RPC used when deploying the smart contracts: %s\n", chainRPCURL)
 
 		// Parse manager type, defaults to poa
-		var vmType l1.ValidatorManagerType
-		switch strings.ToLower(core.ManagerType) {
+		var vmType helpers.ValidatorManagerType
+		switch strings.ToLower(helpers.ManagerType) {
 		case "native-staking", "native":
-			vmType = l1.NativeTokenStakingManagerType
+			vmType = helpers.NativeTokenStakingManagerType
 		case "erc20-staking", "erc20":
-			vmType = l1.ERC20TokenStakingManagerType
+			vmType = helpers.ERC20TokenStakingManagerType
 		default:
-			vmType = l1.PoAValidatorManagerType
+			vmType = helpers.PoAValidatorManagerType
 			fmt.Printf("  Using validator manager type of %s\n", vmType)
 		}
 
-		var vmDeployment *l1.ValidatorManagerDeployment
-		vmDeployment, err = l1.DeployValidatorManagerWithForge(
+		var vmDeployment *helpers.ValidatorManagerDeployment
+		vmDeployment, err = helpers.DeployValidatorManagerWithForge(
 			ctx,
 			chainRPCURL,
 			privateKeyHex,
 			parsedSubnetID,
 			ownerAddress.String(),
 			vmType,
-			core.ContractsPath,
+			helpers.ContractsPath,
 		)
 		if err != nil {
 			return fmt.Errorf("failed to deploy validator manager: %w", err)
@@ -175,7 +174,7 @@ func run() error {
 		}
 
 		// Save deployment info
-		deploymentFile := strings.TrimSuffix(core.OutputFile, filepath.Ext(core.OutputFile)) + "-output.json"
+		deploymentFile := strings.TrimSuffix(helpers.OutputFile, filepath.Ext(helpers.OutputFile)) + "-output.json"
 		if err := vmDeployment.SaveDeployment(deploymentFile); err != nil {
 			fmt.Printf("  Warning: failed to save deployment info: %v\n", err)
 		} else {

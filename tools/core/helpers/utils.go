@@ -1,4 +1,4 @@
-package main
+package helpers
 
 import (
 	"encoding/hex"
@@ -20,6 +20,15 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
+const (
+	// PoAValidatorManagerType is for Proof of Authority L1s
+	PoAValidatorManagerType ValidatorManagerType = iota
+	// NativeTokenStakingManagerType is for PoS with native token staking
+	NativeTokenStakingManagerType
+	// ERC20TokenStakingManagerType is for PoS with ERC20 token staking
+	ERC20TokenStakingManagerType
+)
+
 var (
 	NetworkName            string
 	SubnetIDStr            string
@@ -35,6 +44,9 @@ var (
 	ContractsPath          string
 	ManagerType            string
 )
+
+// ValidatorManagerType represents the type of validator manager to deploy
+type ValidatorManagerType int
 
 // GenesisConfig represents a simplified genesis file structure
 type GenesisConfig struct {
