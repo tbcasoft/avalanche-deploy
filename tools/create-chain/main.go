@@ -1,4 +1,4 @@
-package main
+package core
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	"github.com/ava-labs/avalanchego/utils/constants"
 	"github.com/ava-labs/avalanchego/vms/secp256k1fx"
 	"github.com/ava-labs/avalanchego/wallet/subnet/primary"
-	"github.com/tbcasoft/avalanche-deploy/tools/core"
+	"github.com/tbcasoft/avalanche-deploy/tools/core/helpers"
 )
 
 type CreatedChain struct {
@@ -25,20 +25,19 @@ type CreatedChain struct {
 	NetworkName      string `json:"network-name"`
 	RpcEndpoint      string `json:"rpc-endpoint"`
 	WalletName       string `json:"wallet-name"`
-	WalletEthAddress string `json:"wallet-eth-address"`
+	WalletEthAddress string `json:"wallet-eth-address-also-known-as-chain-address"`
 }
 
 func main() {
 
-	flag.StringVar(&core.NetworkName, "network", "fuji", "Network: fuji or mainnet")
-	flag.StringVar(&core.SubnetIDStr, "subnetidstr", "", "The container id of blockchain(s).")
-	flag.StringVar(&core.ChainName, "chain-name", "my-l1", "Name for the L1 chain")
-	flag.StringVar(&core.KeyName, "key-name", "", "Key name from platform-cli keystore (~/.platform/keys, preferred)")
-	flag.StringVar(&core.OutputFile, "output", "l1.env", "Output file for subnet/chain IDs")
-	flag.StringVar(&core.GenesisFile, "genesis-file", "", "Genesis file path (default: configs/l1/genesis/genesis.json in current or parent dirs)")
-	flag.Float64Var(&core.BalanceAVAX, "validator-balance", 1.0, "Initial balance per validator in AVAX (supports decimals, e.g., 0.1)")
-	flag.StringVar(&core.RpcUrL, "rpcurl", "", "Rpc node http endpoint.")
-	flag.StringVar(&core.OutputFile, "output", "create-chain", "Output from create-chain execution.  Don't include the suffix as -output.json will be added to the output file name.")
+	flag.StringVar(&helpers.NetworkName, "network", "fuji", "Network: fuji or mainnet")
+	flag.StringVar(&helpers.SubnetIDStr, "subnetidstr", "", "The container id of blockchain(s).")
+	flag.StringVar(&helpers.ChainName, "chain-name", "my-l1", "Name for the L1 chain")
+	flag.StringVar(&helpers.KeyName, "key-name", "", "Key name from platform-cli keystore (~/.platform/keys, preferred)")
+	flag.StringVar(&helpers.GenesisFile, "genesis-file", "", "Genesis file path (default: configs/l1/genesis/genesis.json in current or parent dirs)")
+	flag.Float64Var(&helpers.BalanceAVAX, "validator-balance", 1.0, "Initial balance per validator in AVAX (supports decimals, e.g., 0.1)")
+	flag.StringVar(&helpers.RpcUrL, "rpcurl", "", "Rpc node http endpoint (e.g. http://18.219.181.165:9650)")
+	flag.StringVar(&helpers.OutputFile, "output-file", "create-chain", "Output from create-chain execution.  Don't include the suffix as -output.json will be added to the output file name.")
 	flag.Parse()
 
 	if err := run(); err != nil {
@@ -53,57 +52,58 @@ func run() error {
 	createdChain := &CreatedChain{}
 
 	// Validate chain name (must be alphanumeric only)
-	if err = core.ValidateChainName(core.ChainName); err != nil {
+	if err = helpers.ValidateChainName(helpers.ChainName); err != nil {
 		return err
 	}
-	createdChain.ChainName = core.ChainName
+	createdChain.ChainName = helpers.ChainName
 
 	// Resolve genesis file path
-	if core.GenesisFile == "" {
-		core.GenesisFile, err = core.FindGenesisFile()
+	if helpers.GenesisFile == "" {
+		helpers.GenesisFile, err = helpers.FindGenesisFile()
 		if err != nil {
 			return fmt.Errorf("failed to find genesis file: %w", err)
 		}
 	}
-	createdChain.GenesisFile = core.GenesisFile
+	createdChain.GenesisFile = helpers.GenesisFile
 
 	// Load genesis
-	genesisBytes, err := os.ReadFile(core.GenesisFile)
+	genesisBytes, err := os.ReadFile(helpers.GenesisFile)
 	if err != nil {
-		return fmt.Errorf("failed to read genesis file %s: %w", core.GenesisFile, err)
+		return fmt.Errorf("failed to read genesis file %s: %w", helpers.GenesisFile, err)
 	}
-	evmChainID, err := core.ExtractEVMChainID(genesisBytes)
+	evmChainID, err := helpers.ExtractEVMChainID(genesisBytes)
 	if err != nil {
-		return fmt.Errorf("Error:  not able to dervie EVM Chain id from genesis file (%s), error: %v\n", core.GenesisFile, err)
+		return fmt.Errorf("Error:  not able to dervie EVM Chain id from genesis file (%s), error: %v\n", helpers.GenesisFile, err)
 	}
 	createdChain.EvmChainID = evmChainID
 
 	// Get network configuration
-	networkID, rpcEndpoint, err := core.GetCustomNetworkConfig(core.NetworkName, core.RpcUrL)
-	createdChain.NetworkName = core.NetworkName
+	networkID, rpcEndpoint, err := helpers.GetCustomNetworkConfig(helpers.NetworkName, helpers.RpcUrL)
+	createdChain.NetworkName = helpers.NetworkName
 	createdChain.RpcEndpoint = rpcEndpoint
 
 	fmt.Println("=== Create Chain Task ===")
-	fmt.Printf("Network:    %s (ID: %d)\n", core.NetworkName, networkID)
-	fmt.Printf("Chain Name: %s\n", core.ChainName)
+	fmt.Printf("Network:    %s (ID: %d)\n", helpers.NetworkName, networkID)
+	fmt.Printf("Chain Name: %s\n", helpers.ChainName)
 	fmt.Printf("Chain EVM unique ID: %s\n", evmChainID)
+	fmt.Printf("RPC endpoint: %s\n", rpcEndpoint)
 
 	ctx := context.Background()
 
 	// Initialize keychain and wallet
 	var kc *secp256k1fx.Keychain
-	var wallketPrivateKey ids.ShortID
+	var ownerAddress ids.ShortID
 
 	fmt.Println("[1/4] Creating wallet...")
-	key, err := core.LoadPrivateKey(core.KeyName)
+	key, err := helpers.LoadPrivateKey(helpers.KeyName)
 	if err != nil {
 		return fmt.Errorf("failed to load private key: %w", err)
 	}
-	wallketPrivateKey = key.Address()
-	createdChain.WalletName = core.KeyName
+	ownerAddress = helpers.DeriveAvalancheAddressIdentifier(key)
+	createdChain.WalletName = helpers.KeyName
 
-	// Derive Ethereum address and check genesis funding
-	ethAddress := core.DeriveEthAddress(key)
+	// Derive Ethereum address (also known as the wallet's c-chain address) and check genesis funding
+	ethAddress := helpers.DeriveEthAddress(key)
 	createdChain.WalletEthAddress = ethAddress
 	//No need to check genesis funding for a PoA base chain.
 
@@ -112,36 +112,40 @@ func run() error {
 	// Use public API for wallet/transactions since validator nodes may not be connected yet
 	walletURI := rpcEndpoint
 
+	parsedSubnetID, err := helpers.FromStringToSubnetID(helpers.SubnetIDStr)
+	if err != nil {
+		return fmt.Errorf("Unable to covert sub id (str) %s to ids.ID object.  Error: %w", helpers.SubnetIDStr, err)
+	}
+	fmt.Printf("Configuring my wallet for subnet ID: %s\n", parsedSubnetID)
+
 	/**
 	Get the P-chain wallet used to pay for transactions.
 
 	UTXO stands for Unspent Transaction Output. It is the accounting model used by cryptocurrencies like Bitcoin, Litecoin,
 	and parts of the Avalanche network (specifically the X-Chain and P-Chain) to track digital currency ownership and balance.
 	*/
-	wallet, err := primary.MakePWallet(ctx, walletURI, kc, primary.WalletConfig{})
+	config := primary.WalletConfig{SubnetIDs: []ids.ID{parsedSubnetID}} //tells wallet to load metadata information for my subnet.
+	wallet, err := primary.MakePWallet(ctx, walletURI, kc, config)
 	if err != nil {
 		return fmt.Errorf("failed to create wallet: %w", err)
 	}
-	fmt.Printf("  Our P-chain Wallet (\"%s\") loaded successfully\n", core.KeyName)
-	fmt.Printf("  ******  TODO: is this the wallet's private key?   P-Chain Address: %s\n", wallketPrivateKey)
-	fmt.Printf("  EVM Address:     %s\n", ethAddress)
-	fmt.Printf("  Required P-Chain balance: ~%.2f AVAX per validator\n", core.BalanceAVAX)
+
+	fmt.Printf("  Our Wallet (\"%s\") loaded successfully\n", helpers.KeyName)
+	fmt.Printf("  Wallet's Avalanche Address Identifier (i.e. to be used as the \"owner\" of subnet): %s\n", ownerAddress)
+	fmt.Printf("  Wallet's P-chain address: %s\n", helpers.DerivePChainAddress(key))
+	fmt.Printf("  EVM (C-chain) Address:     %s\n", ethAddress)
 
 	// This is normally the check funding step (i.e "Report genesis funding status").  However, funding is not required for a Proof of Authority, zero gas fee L1.
 	// In a PoA network, security is derived from corporate identity and legal reputation, not from locked financial capital (staking).
 
-	var subnetID [32]byte
-	copy(subnetID[:], core.SubnetIDStr)
-	fmt.Printf("Subnet id: %s\n", subnetID)
-
 	// Create chain
 	fmt.Println("[3/4] Creating chain...")
 	chainTx, err := wallet.IssueCreateChainTx(
-		subnetID,
+		parsedSubnetID,
 		genesisBytes,
 		constants.SubnetEVMID,
 		nil,
-		core.ChainName,
+		helpers.ChainName,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create chain: %w", err)
@@ -152,7 +156,7 @@ func run() error {
 	fmt.Printf("  Chain created.  Txn ID: %s,  chain ID: %s\n", chainTx.TxID, chainID)
 
 	// Save deployment info
-	deploymentFile := strings.TrimSuffix(core.OutputFile, filepath.Ext(core.OutputFile)) + "-output.json"
+	deploymentFile := strings.TrimSuffix(helpers.OutputFile, filepath.Ext(helpers.OutputFile)) + "-output.json"
 	if err := createdChain.SaveDeployment(deploymentFile); err != nil {
 		fmt.Printf("  Warning: failed to save deployment info: %v\n", err)
 	} else {

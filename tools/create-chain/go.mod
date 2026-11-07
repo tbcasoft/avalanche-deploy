@@ -2,10 +2,11 @@ module github.com/tbcasoft/avalanche-deploy/tools/create-chain
 
 go 1.26.4
 
-replace github.com/tbcasoft/avalanche-deploy/tools/core => ../core
+replace github.com/tbcasoft/avalanche-deploy/tools/core/helpers => ../core/helpers
+
 require (
 	github.com/ava-labs/avalanchego v1.15.0
-	github.com/tbcasoft/avalanche-deploy/tools/core v0.0.0-20261029184725-54fe1a2d0f22
+	github.com/tbcasoft/avalanche-deploy/tools/core/helpers v0.0.0-00010101000000-000000000000
 )
 
 require (

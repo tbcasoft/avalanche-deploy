@@ -2,11 +2,10 @@ module github.com/tbcasoft/avalanche-deploy/tools/convert-subnet-to-l1
 
 go 1.26.4
 
-replace github.com/tbcasoft/avalanche-deploy/tools/core => ../core
+replace github.com/tbcasoft/avalanche-deploy/tools/core/helpers => ../core/helpers
 
 require (
-	github.com/tbcasoft/avalanche-deploy/tools/core v0.0.0-20261029184725-54fe1a2d0f22
-	github.com/tbcasoft/avalanche-deploy/tools/create-l1 v0.0.0-20261102173915-f791c32a8a5e
+	github.com/tbcasoft/avalanche-deploy/tools/core/helpers v0.0.0-00010101000000-000000000000
 )
 
 require (
