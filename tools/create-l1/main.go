@@ -17,8 +17,8 @@ import (
 	"github.com/ava-labs/avalanchego/utils/constants"
 	"github.com/ava-labs/avalanchego/utils/crypto/secp256k1"
 	"github.com/ava-labs/avalanchego/utils/units"
+	"github.com/ava-labs/avalanchego/vms/platformvm/platform"
 	"github.com/ava-labs/avalanchego/vms/platformvm/signer"
-	"github.com/ava-labs/avalanchego/vms/platformvm/txs"
 	"github.com/ava-labs/avalanchego/vms/secp256k1fx"
 	"github.com/ava-labs/avalanchego/wallet/subnet/primary"
 	dcrsecp "github.com/decred/dcrd/dcrec/secp256k1/v4"
@@ -357,7 +357,7 @@ func run() error {
 	// Gather validator info and convert to L1
 	fmt.Println("  Gathering validator info...")
 
-	validators := make([]*txs.ConvertSubnetToL1Validator, 0, len(nodeURIs))
+	validators := make([]*platform.ConvertSubnetToL1Validator, 0, len(nodeURIs))
 	nodeIDs := make([]ids.NodeID, 0, len(nodeURIs))
 	nodePoPs := make([]*signer.ProofOfPossession, 0, len(nodeURIs))
 	weights := make([]uint64, 0, len(nodeURIs))
@@ -371,7 +371,7 @@ func run() error {
 		fmt.Printf("    Node %d: %s\n", i+1, nodeID)
 
 		weight := units.Schmeckle
-		validators = append(validators, &txs.ConvertSubnetToL1Validator{
+		validators = append(validators, &platform.ConvertSubnetToL1Validator{
 			NodeID:  nodeID.Bytes(),
 			Weight:  weight,
 			Balance: uint64(balanceAVAX * float64(units.Avax)),
