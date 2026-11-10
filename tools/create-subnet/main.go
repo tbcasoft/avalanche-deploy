@@ -72,7 +72,11 @@ func run() error {
 
 	fmt.Printf("  Our Wallet (\"%s\") loaded successfully\n", helpers.KeyName)
 	fmt.Printf("  Wallet's Avalanche Address Identifier (i.e. to be used as the \"owner\" of subnet): %s\n", ownerAddress)
-	fmt.Printf("  Wallet's P-chain address: %s\n", helpers.DerivePChainAddress(key))
+	pChainAddr, err := helpers.DerivePChainAddress(key)
+	if err != nil {
+		return fmt.Errorf("failed to derive pChain address: %w", err)
+	}
+	fmt.Printf("  Wallet's P-chain address: %s\n", pChainAddr)
 	fmt.Printf("  EVM (C-chain) Address:     %s\n", ethAddress)
 	fmt.Printf("  Required P-Chain balance: ~%.2f AVAX per validator\n", helpers.BalanceAVAX)
 
