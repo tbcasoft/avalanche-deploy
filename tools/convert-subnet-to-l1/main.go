@@ -10,7 +10,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ava-labs/avalanchego/wallet/subnet/primary"
+	"github.com/ava-labs/avalanchego/api/info"
 	"github.com/ava-labs/avalanchego/ids"
+	"github.com/ava-labs/avalanchego/utils/units"
+	"github.com/ava-labs/avalanchego/vms/platformvm/signer"
+	"github.com/ava-labs/avalanchego/vms/platformvm/platform"
 	"github.com/ava-labs/avalanchego/vms/secp256k1fx"
 	"github.com/tbcasoft/avalanche-deploy/tools/core/helpers"
 )
@@ -64,7 +69,7 @@ func run() error {
 	fmt.Println("[1/4] Creating wallet.  The wallet's private key is used to deploy the validator manager smart contract to your chain.")
 	var kc *secp256k1fx.Keychain
 	var ownerAddress ids.ShortID
-	fmt.Println("[1/4] Creating wallet...")
+
 	key, err := helpers.LoadPrivateKey(helpers.KeyName)
 	if err != nil {
 		return fmt.Errorf("failed to load private key: %w", err)
@@ -74,14 +79,29 @@ func run() error {
 	ethAddress := helpers.DeriveEthAddress(key)
 	//No need to check genesis funding for a PoA base chain.
 
-	// Get the private key hex for forge when deploying validator manager smart contract.
-	keyBytes := key.Bytes()
-	privateKeyHex := "0x" + fmt.Sprintf("%x", keyBytes)
+	kc = secp256k1fx.NewKeychain(key)
 
+	// Use public API for wallet/transactions since validator nodes may not be connected yet
+	walletURI := rpcEndpoint
+
+	/**
+	Get the P-chain wallet used to pay for transactions.
+
+	UTXO stands for Unspent Transaction Output. It is the accounting model used by cryptocurrencies like Bitcoin, Litecoin,
+	and parts of the Avalanche network (specifically the X-Chain and P-Chain) to track digital currency ownership and balance.
+	*/
+	wallet, err := primary.MakePWallet(ctx, walletURI, kc, primary.WalletConfig{})
+	if err != nil {
+		return fmt.Errorf("failed to create wallet: %w", err)
+	}
 	fmt.Printf("  Our Wallet (\"%s\") loaded successfully\n", helpers.KeyName)
 	fmt.Printf("  Wallet's Avalanche Address Identifier (i.e. to be used as the \"owner\" of subnet): %s\n", ownerAddress)
 	fmt.Printf("  Wallet's P-chain address: %s\n", helpers.DerivePChainAddress(key))
 	fmt.Printf("  EVM (C-chain) Address:     %s\n", ethAddress)
+
+	// Get the private key hex for forge when deploying validator manager smart contract.
+	keyBytes := key.Bytes()
+	privateKeyHex := "0x" + fmt.Sprintf("%x", keyBytes)
 
 	// Parse validator IPs.  At least one validator is needed to deploy validator manager.
 	ips, err := helpers.ParseValidatorIPs(helpers.ValidatorIPs)
@@ -184,6 +204,115 @@ func run() error {
 		fmt.Println("[5/6] Gathering validator info...")
 	} else {
 		fmt.Println("[4/5] Gathering validator info...")
+	}
+
+	// Gather validator info and convert to L1
+	fmt.Println("  Gathering validator info...")
+	validators := make([]*platform.ConvertSubnetToL1Validator, 0, len(nodeURIs))
+	nodeIDs := make([]ids.NodeID, 0, len(nodeURIs))
+	/**
+	Proof-of-Possession (PoP) is a cryptographic signature that proves a node operator owns the private key corresponding to their public validating key.
+	By forcing every validator to provide a Proof-of-Possession when joining the network, they prove they actually know the private key for their specific public key.
+	*/
+	nodePoPs := make([]*signer.ProofOfPossession, 0, len(nodeURIs))
+
+	weights := make([]uint64, 0, len(nodeURIs))
+
+	for i, uri := range nodeURIs {
+		infoClient := info.NewClient(uri)
+		nodeID, nodePoP, err := infoClient.GetNodeID(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to get node %d info from %s: %w", i+1, uri, err)
+		}
+		fmt.Printf("    Node %d: %s\n", i+1, nodeID)
+
+		weight := units.Schmeckle
+
+		validators = append(validators, &platform.ConvertSubnetToL1Validator{
+			NodeID:  nodeID.Bytes(),
+			Weight:  weight, should this be 100 since we only have one validator?
+			Balance: uint64(balanceAVAX * float64(units.Avax)),
+			Signer:  *nodePoP,
+		})
+
+		nodeIDs = append(nodeIDs, nodeID)
+		nodePoPs = append(nodePoPs, nodePoP)
+		weights = append(weights, weight)
+	}
+
+	if helpers.DeployValidatorManager {
+		fmt.Println("[6/7] Converting subnet to L1...")
+	} else {
+		fmt.Println("[5/5] Converting subnet to L1...")
+	}
+
+	fmt.Println("  Issuing ConvertSubnetToL1Tx...")
+	conversionTx, err := wallet.IssueConvertSubnetToL1Tx(
+		subnetID,
+		chainID,
+		managerAddress, // Use deployed validator manager address or empty
+		validators,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to convert subnet to L1: %w", err)
+	}
+	conversionTxID := conversionTx.ID()
+	fmt.Printf("  Conversion Tx: %s\n", conversionTxID)
+
+	// Wait for chain
+	fmt.Println("  Waiting for chain to be ready...")
+	time.Sleep(10 * time.Second)
+
+	// Initialize validator set if validator manager was deployed
+	if helpers.DeployValidatorManager && vmDeployment != nil {
+		fmt.Println("[7/7] Initializing validator set...")
+
+		// Build the chain RPC URL
+		chainRPCURL := fmt.Sprintf("%s/ext/bc/%s/rpc", strings.TrimRight(nodeURIs[0], "/"), chainID)
+
+		// Get the private key hex for cast
+		keyBytes := key.Bytes()
+		privateKeyHex := "0x" + fmt.Sprintf("%x", keyBytes)
+
+		// Build ConversionData
+		conversionData := BuildConversionData(
+			subnetID,
+			chainID,
+			vmDeployment.ValidatorManagerProxy,
+			nodeIDs,
+			nodePoPs,
+			weights,
+		)
+
+		var signedMessage []byte
+		var useGlacierAPI = !useLocalSigAgg && !startSigAgg //if we are not running our own signature aggregator, use Glacier
+		var sigAgg *SignatureAggregator
+
+		if !useGlacierAPI && startSigAgg {
+			todo
+		} else if !useGlacierAPI && useLocalSigAgg {
+			// Using existing local signature-aggregator URL
+			fmt.Println("  Using local signature-aggregator for private L1...")
+		}
+
+		if !useGlacierAPI {
+			toto
+		}
+
+		if useGlacierAPI {
+			todo
+		}
+
+		// Call initializeValidatorSet on the contract
+		err = InitializeValidatorSet(
+			ctx,
+			chainRPCURL,
+			privateKeyHex,
+			vmDeployment.ValidatorManagerProxy,
+			conversionData,
+			signedMessage,
+			contractsPath,
+		)
 	}
 
 	return nil
