@@ -32,6 +32,7 @@ const (
 var (
 	NetworkName            string
 	SubnetIDStr            string
+	ChainIDStr             string
 	KeyName                string
 	OutputFile             string
 	ValidatorIPs           string
@@ -43,10 +44,43 @@ var (
 	DeployValidatorManager bool
 	ContractsPath          string
 	ManagerType            string
+	UseLocalSigAgg         bool
+	CreateLocalSigAgg      bool
+	SigAggURL              string
+	JsonOutput             bool
 )
+
+// L1Output represents the JSON output structure for scripting
+type L1Output struct {
+	SubnetID         string            `json:"subnet_id"`
+	ChainID          string            `json:"chain_id"`
+	EVMChainID       string            `json:"evm_chain_id,omitempty"`
+	ChainName        string            `json:"chain_name"`
+	Network          string            `json:"network"`
+	Validators       []ValidatorOutput `json:"validators"`
+	RPCEndpoints     []string          `json:"rpc_endpoints"`
+	ValidatorManager *VMOutput         `json:"validator_manager,omitempty"`
+	ConversionTxID   string            `json:"conversion_tx_id,omitempty"`
+	OutputFile       string            `json:"output_file"`
+	CreatedAt        string            `json:"created_at"`
+}
+
+// VMOutput represents validator manager contract addresses
+type VMOutput struct {
+	Implementation string `json:"implementation,omitempty"`
+	Proxy          string `json:"proxy,omitempty"`
+	PoAManager     string `json:"poa_manager,omitempty"`
+}
 
 // ValidatorManagerType represents the type of validator manager to deploy
 type ValidatorManagerType int
+
+// ValidatorOutput represents a validator in the JSON output
+type ValidatorOutput struct {
+	NodeID string `json:"node_id"`
+	IP     string `json:"ip"`
+	Weight uint64 `json:"weight"`
+}
 
 // GenesisConfig represents a simplified genesis file structure
 type GenesisConfig struct {
@@ -431,4 +465,13 @@ func FromStringToSubnetID(s string) (ids.ID, error) {
 // Avalanche IDs are Base58-encoded strings, not raw byte strings. Always use this method rather than copy() when converting them.
 func FromStringToChainID(s string) (ids.ID, error) {
 	return ids.FromString(s)
+}
+
+func BuildRPCEndpoints(nodeURIs []string, chainID ids.ID) string {
+	var lines []string
+	for i, nodeURI := range nodeURIs {
+		baseURI := strings.TrimRight(nodeURI, "/")
+		lines = append(lines, fmt.Sprintf("RPC_%d_URL=%s/ext/bc/%s/rpc", i+1, baseURI, chainID))
+	}
+	return strings.Join(lines, "\n")
 }

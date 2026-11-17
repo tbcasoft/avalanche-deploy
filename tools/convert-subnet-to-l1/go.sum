@@ -36,8 +36,8 @@ github.com/ava-labs/firewood-go-ethhash/ffi v0.8.0 h1:EDhwnUb6Fy/88cqUCcuj0R5u8i
 github.com/ava-labs/firewood-go-ethhash/ffi v0.8.0/go.mod h1:3pf8KGfCmqegWoY5/pZ1NHUcyuRkfl/vHQuOjsdUtbI=
 github.com/ava-labs/ledger-avalanche-go v1.1.0 h1:OkscKtb/gX20HBt8RyAtwXLrQnCEls5SzWGieE7NoNM=
 github.com/ava-labs/ledger-avalanche-go v1.1.0/go.mod h1:mAlG9ptnPjvNoLGLHXnM3slGY8ewvBJtJNVTEjG8KvI=
-github.com/ava-labs/libevm v1.13.15-0.20261028200218-d398bc4dbe41 h1:dP7gPw/saBgzyvqQyNeZhPtq3CvDGY68Qeejoe1Y2Mk=
-github.com/ava-labs/libevm v1.13.15-0.20261028200218-d398bc4dbe41/go.mod h1:8yAUPU6+VsyTW2vhZ6J6dDO8Z3fCkg2ulAYfRCbtVTQ=
+github.com/ava-labs/libevm v1.13.15-0.20261019121158-2c4d255e0a63 h1:5kcXFn0aFKr1bcla6tklSk6V5E5Le2GSQYFdkEbd3AU=
+github.com/ava-labs/libevm v1.13.15-0.20261019121158-2c4d255e0a63/go.mod h1:8yAUPU6+VsyTW2vhZ6J6dDO8Z3fCkg2ulAYfRCbtVTQ=
 github.com/ava-labs/platform-cli v1.0.1 h1:aE8NWtjTXR9iqt/w+bA2QtLUrWmo0l8cGMfnGjoV5eI=
 github.com/ava-labs/platform-cli v1.0.1/go.mod h1:zT2UDJ4KAqyU7dL0PhhFtnPSHhHLiS8WByCwH9gULCA=
 github.com/aymerick/raymond v2.0.3-0.20180322193309-b565731e1464+incompatible/go.mod h1:osfaiScAUVup+UC9Nfq76eWqDhXlp+4UYaA8uhTBO6g=
