@@ -20,7 +20,8 @@ require (
 	github.com/ava-labs/avalanchego/graft/evm v1.15.2 // indirect
 	github.com/ava-labs/firewood-go-ethhash/ffi v0.8.0 // indirect
 	github.com/ava-labs/ledger-avalanche-go v1.1.0 // indirect
-	github.com/ava-labs/libevm v1.13.15-0.20261028200218-d398bc4dbe41 // indirect
+	//github.com/ava-labs/libevm v1.13.15-0.20261028200218-d398bc4dbe41 // indirect
+	github.com/ava-labs/libevm v1.13.15-0.20261019121158-2c4d255e0a63 // indirect
 	github.com/ava-labs/platform-cli v1.0.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.20.0 // indirect

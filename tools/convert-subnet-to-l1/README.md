@@ -22,8 +22,14 @@ export PLATFORM_CLI_KEY_PASSWORD=[YOUR_PASSWORD]
 Note:  by default, wallet stored in platform-cli keystore.  This wallet is password protected.
 
 ubuntu@ip-10-8-3-214:/data/tbcasoft/avalanche-deploy/tools/convert-subnet-to-l1$ ./convert-subnet-to-l1 \
+--network="fuji" \
 --subnetidstr=[E.G. 2MGNFLqeLP9EgHvLT2hfdKSvkLFwnGa1o7cDXPPcQQ88CB9C1v] \
+--chainidstr="2VsBtoGoe5fz6kG78TMYGPgMFhsk6e7jbktsDpvkSJzVDSgZYR" \
 -key-name my-l1-key-admin-created-from-platform-cli \
---validators=[Comma-separated validators.  Format is host:port, don't include the protocol http and https] \
+--rpcurl=http://18.219.181.165:9650 \
+--validators=[host:9651.  Format is host:port, don't include the protocol http and https] \
 --genesis-proxy-address="0xfacade0000000000000000000000000000000000" \
---deploy-validator-manager=true
+--deploy-validator-manager=true \
+--local-sig-agg=true \
+--sig-agg-url="http://localhost:[api port 8090]" \
+--output-file="convert-subnet-to-l1"

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -10,25 +11,33 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ava-labs/avalanchego/wallet/subnet/primary"
 	"github.com/ava-labs/avalanchego/api/info"
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/utils/units"
-	"github.com/ava-labs/avalanchego/vms/platformvm/signer"
 	"github.com/ava-labs/avalanchego/vms/platformvm/platform"
+	"github.com/ava-labs/avalanchego/vms/platformvm/signer"
 	"github.com/ava-labs/avalanchego/vms/secp256k1fx"
+	"github.com/ava-labs/avalanchego/wallet/subnet/primary"
 	"github.com/tbcasoft/avalanche-deploy/tools/core/helpers"
 )
 
 func main() {
 
+	flag.StringVar(&helpers.NetworkName, "network", "fuji", "Network: fuji or mainnet")
+	flag.StringVar(&helpers.RpcUrL, "rpcurl", "", "Rpc node http endpoint (e.g. http://18.219.181.165:9650)")
 	flag.StringVar(&helpers.SubnetIDStr, "subnetidstr", "", "The container id of blockchain(s).")
-	flag.StringVar(&helpers.GenesisProxyAddress, "genesis-proxy-address", "", "Use existing proxy address from genesis (e.g., 0xfacade0000000000000000000000000000000000)")
+	flag.StringVar(&helpers.ChainIDStr, "chainidstr", "", "The container id of blockchain(s).")
+	flag.StringVar(&helpers.GenesisProxyAddress, "genesis-proxy-address", "0xfacade0000000000000000000000000000000000", "Use existing proxy address from genesis (e.g., 0xfacade0000000000000000000000000000000000)")
 	flag.StringVar(&helpers.KeyName, "key-name", "", "Key name from platform-cli keystore (~/.platform/keys, preferred)")
-	flag.BoolVar(&helpers.DeployValidatorManager, "deploy-validator-manager", false, "Deploy ValidatorManager contracts (requires forge)")
+	flag.BoolVar(&helpers.DeployValidatorManager, "deploy-validator-manager", true, "Deploy ValidatorManager contracts (requires forge)")
 	flag.StringVar(&helpers.ValidatorIPs, "validators", "", "Comma-separated validators.  Format is host:port, don't include the protocol (i.e. http and https)")
+	flag.Float64Var(&helpers.BalanceAVAX, "validator-balance", 1.0, "Initial balance per validator in AVAX (supports decimals, e.g., 0.1)")
 	flag.StringVar(&helpers.ManagerType, "manager-type", "poa", "Validator manager type: poa, native-staking, erc20-staking")
-	flag.StringVar(&helpers.OutputFile, "output", "l1.env", "Convert subnet to L1 output file.  Don't include the suffix as -output.json will be added to the output file name.")
+	flag.BoolVar(&helpers.UseLocalSigAgg, "local-sig-agg", true, "Use local signature-aggregator instead of Glacier API (for private L1s)")
+	flag.BoolVar(&helpers.CreateLocalSigAgg, "create-sig-agg", false, "Create and Start a local signature-aggregator process")
+	flag.StringVar(&helpers.SigAggURL, "sig-agg-url", "", "URL of running signature-aggregator (e.g., http://localhost:8080)")
+	flag.StringVar(&helpers.OutputFile, "output-file", "convert-subnet-to-l1", "Convert subnet to L1 output file.  Don't include the suffix as -output.json will be added to the output file name.")
+	flag.BoolVar(&helpers.JsonOutput, "json", true, "Output results as JSON (for scripting)")
 	/**
 	* Path to the Avalanche Interchain Messaging (ICM, formerly Teleporter).  ICM is used for interchain communication.
 	* The repository is https://github.com/ava-labs/icm-services.  Note: the tools just want the parent directory to icm-contracts.
@@ -49,6 +58,16 @@ func main() {
 }
 
 func run() error {
+
+	ctx := context.Background()
+
+	err := requisiteChecks()
+	if err != nil {
+		return fmt.Errorf("Prerequisites not met.  Error: %w", err)
+	}
+
+	// Get network configuration
+	networkID, rpcEndpoint, err := helpers.GetCustomNetworkConfig(helpers.NetworkName, helpers.RpcUrL)
 
 	/**
 	Avalanche IDs are Base58-encoded strings, not raw byte strings. Always use ids.FromString() rather than copy() when converting them.
@@ -96,7 +115,8 @@ func run() error {
 	}
 	fmt.Printf("  Our Wallet (\"%s\") loaded successfully\n", helpers.KeyName)
 	fmt.Printf("  Wallet's Avalanche Address Identifier (i.e. to be used as the \"owner\" of subnet): %s\n", ownerAddress)
-	fmt.Printf("  Wallet's P-chain address: %s\n", helpers.DerivePChainAddress(key))
+	pChainAddress, _ := helpers.DerivePChainAddress(key)
+	fmt.Printf("  Wallet's P-chain address: %s\n", pChainAddress)
 	fmt.Printf("  EVM (C-chain) Address:     %s\n", ethAddress)
 
 	// Get the private key hex for forge when deploying validator manager smart contract.
@@ -118,7 +138,6 @@ func run() error {
 	}
 	fmt.Println()
 
-	ctx := context.Background()
 	fmt.Println("[1/4] Build node URIs from validator endpoints.")
 	nodeURIs := make([]string, len(ips)) //node array will be in format of http://host:port
 	for i, endpoint := range ips {
@@ -130,7 +149,8 @@ func run() error {
 	}
 
 	fmt.Println("[4/4] Deploy validator manager contracts if requested")
-	var managerAddress []byte //represents validator manager proxy address from genesis config.  This will be used as part of converting subnet to L1.
+	var managerProxyAddress []byte //represents validator manager proxy address from genesis config.  This will be used as part of converting subnet to L1.
+	var vmDeployment *helpers.ValidatorManagerDeployment
 
 	// If genesis proxy address is provided, use it as the manager address.
 	// If using Builder Hub to generate genesis.json and you enabled “Transparent Upgradable Proxy” option,
@@ -147,7 +167,7 @@ func run() error {
 		if err != nil {
 			return fmt.Errorf("failed to decode genesis proxy address: %s, err: %w", addrStr, err)
 		}
-		managerAddress = addrBytes
+		managerProxyAddress = addrBytes
 		fmt.Printf("  Proxy Address: 0x%s\n", addrStr)
 		fmt.Println("  NOTE: You must deploy the ValidatorManager implementation and upgrade the proxy AFTER L1 conversion")
 	}
@@ -174,7 +194,6 @@ func run() error {
 			fmt.Printf("  Using validator manager type of %s\n", vmType)
 		}
 
-		var vmDeployment *helpers.ValidatorManagerDeployment
 		vmDeployment, err = helpers.DeployValidatorManagerWithForge(
 			ctx,
 			chainRPCURL,
@@ -188,7 +207,7 @@ func run() error {
 			return fmt.Errorf("failed to deploy validator manager: %w", err)
 		}
 
-		managerAddress, err = vmDeployment.GetManagerAddressForConversion()
+		managerProxyAddress, err = vmDeployment.GetManagerProxyAddressForConversion()
 		if err != nil {
 			return fmt.Errorf("failed to get manager address: %w", err)
 		}
@@ -213,6 +232,7 @@ func run() error {
 	/**
 	Proof-of-Possession (PoP) is a cryptographic signature that proves a node operator owns the private key corresponding to their public validating key.
 	By forcing every validator to provide a Proof-of-Possession when joining the network, they prove they actually know the private key for their specific public key.
+	The PoP is retrieved from each validator via its info.getNodeID() endpoint.
 	*/
 	nodePoPs := make([]*signer.ProofOfPossession, 0, len(nodeURIs))
 
@@ -220,7 +240,7 @@ func run() error {
 
 	for i, uri := range nodeURIs {
 		infoClient := info.NewClient(uri)
-		nodeID, nodePoP, err := infoClient.GetNodeID(ctx)
+		nodeID, nodePoP, err := infoClient.GetNodeID(ctx) //Get node id which includes the PoP for validator
 		if err != nil {
 			return fmt.Errorf("failed to get node %d info from %s: %w", i+1, uri, err)
 		}
@@ -230,8 +250,8 @@ func run() error {
 
 		validators = append(validators, &platform.ConvertSubnetToL1Validator{
 			NodeID:  nodeID.Bytes(),
-			Weight:  weight, should this be 100 since we only have one validator?
-			Balance: uint64(balanceAVAX * float64(units.Avax)),
+			Weight:  weight,
+			Balance: uint64(helpers.BalanceAVAX * float64(units.Avax)), //initial balance of each validator is 1 AVAX
 			Signer:  *nodePoP,
 		})
 
@@ -248,9 +268,9 @@ func run() error {
 
 	fmt.Println("  Issuing ConvertSubnetToL1Tx...")
 	conversionTx, err := wallet.IssueConvertSubnetToL1Tx(
-		subnetID,
-		chainID,
-		managerAddress, // Use deployed validator manager address or empty
+		parsedSubnetID,
+		parsedChainID,
+		managerProxyAddress, // Use deployed validator manager address or empty
 		validators,
 	)
 	if err != nil {
@@ -268,16 +288,16 @@ func run() error {
 		fmt.Println("[7/7] Initializing validator set...")
 
 		// Build the chain RPC URL
-		chainRPCURL := fmt.Sprintf("%s/ext/bc/%s/rpc", strings.TrimRight(nodeURIs[0], "/"), chainID)
+		chainRPCURL := fmt.Sprintf("%s/ext/bc/%s/rpc", strings.TrimRight(nodeURIs[0], "/"), parsedChainID)
 
 		// Get the private key hex for cast
 		keyBytes := key.Bytes()
 		privateKeyHex := "0x" + fmt.Sprintf("%x", keyBytes)
 
-		// Build ConversionData
-		conversionData := BuildConversionData(
-			subnetID,
-			chainID,
+		// constructs the validators metadata needed as input for smart contracts execution.
+		conversionData := helpers.BuildConversionData(
+			parsedSubnetID,
+			parsedChainID,
 			vmDeployment.ValidatorManagerProxy,
 			nodeIDs,
 			nodePoPs,
@@ -285,34 +305,202 @@ func run() error {
 		)
 
 		var signedMessage []byte
-		var useGlacierAPI = !useLocalSigAgg && !startSigAgg //if we are not running our own signature aggregator, use Glacier
-		var sigAgg *SignatureAggregator
+		var useGlacierAPI = !helpers.UseLocalSigAgg && !helpers.CreateLocalSigAgg //if we are not running our own signature aggregator, use Glacier
 
-		if !useGlacierAPI && startSigAgg {
-			todo
-		} else if !useGlacierAPI && useLocalSigAgg {
-			// Using existing local signature-aggregator URL
-			fmt.Println("  Using local signature-aggregator for private L1...")
+		if !useGlacierAPI && helpers.CreateLocalSigAgg {
+
+			return fmt.Errorf("  Cmd Line argument (create-sig-agg) should be set to false.  It's currently set to %t", helpers.CreateLocalSigAgg)
+
+		} else if !useGlacierAPI && helpers.UseLocalSigAgg {
+			// Using EXISTING local signature-aggregator URL
+			fmt.Println("  Using local, currently running signature-aggregator for private L1...")
 		}
 
 		if !useGlacierAPI {
-			toto
+			// Build the unsigned warp message for the conversion
+			fmt.Println("  Building SubnetToL1ConversionMessage...")
+			unsignedMsg, justification, err := helpers.BuildSubnetToL1ConversionMessage(
+				networkID,
+				parsedSubnetID,
+				parsedChainID,
+				vmDeployment.ValidatorManagerProxy,
+				nodeIDs,
+				nodePoPs,
+				weights,
+			)
+			if err != nil {
+				return fmt.Errorf("failed to build conversion message: %w", err)
+			}
+
+			// Call signature aggregator
+			fmt.Println("  Requesting signatures from lcoal signature aggregator...")
+			signedMessage, err = helpers.CallLocalSignatureAggregatorWithRetry(
+				ctx,
+				helpers.SigAggURL,
+				unsignedMsg,
+				justification,
+				parsedSubnetID,
+				67,
+				30,
+			)
 		}
 
 		if useGlacierAPI {
-			todo
+			return fmt.Errorf("  One of the cmd line argument is wrong as we should not be using Glacier API for signature aggregation.")
 		}
 
 		// Call initializeValidatorSet on the contract
-		err = InitializeValidatorSet(
+		err = helpers.InitializeValidatorSet(
 			ctx,
 			chainRPCURL,
 			privateKeyHex,
 			vmDeployment.ValidatorManagerProxy,
 			conversionData,
 			signedMessage,
-			contractsPath,
+			helpers.ContractsPath,
 		)
+	}
+
+	// Verify chain is accessible.  First output the rpc endpoints.
+	if !helpers.JsonOutput {
+		for i, nodeURI := range nodeURIs {
+			rpcURL := fmt.Sprintf("%s/ext/bc/%s/rpc", strings.TrimRight(nodeURI, "/"), parsedChainID)
+			fmt.Printf("  Checking RPC [%d]: %s\n", i+1, rpcURL)
+		}
+	}
+
+	// Build RPC endpoints list
+	rpcEndpoints := make([]string, len(nodeURIs))
+	for i, nodeURI := range nodeURIs {
+		rpcEndpoints[i] = fmt.Sprintf("%s/ext/bc/%s/rpc", strings.TrimRight(nodeURI, "/"), parsedChainID)
+	}
+
+	// Build validators output
+	validatorOutputs := make([]helpers.ValidatorOutput, len(nodeIDs))
+	for i, nodeID := range nodeIDs {
+		validatorOutputs[i] = helpers.ValidatorOutput{
+			NodeID: nodeID.String(),
+			IP:     ips[i],
+			Weight: weights[i],
+		}
+	}
+
+	// Build JSON output structure
+	output := helpers.L1Output{
+		SubnetID:       parsedSubnetID.String(),
+		ChainID:        parsedChainID.String(),
+		Validators:     validatorOutputs,
+		RPCEndpoints:   rpcEndpoints,
+		ConversionTxID: conversionTxID.String(),
+		OutputFile:     helpers.OutputFile,
+		CreatedAt:      time.Now().Format(time.RFC3339),
+	}
+
+	// Add validator manager info if deployed
+	if vmDeployment != nil {
+		output.ValidatorManager = &helpers.VMOutput{
+			Implementation: vmDeployment.ValidatorManagerImpl,
+			Proxy:          vmDeployment.ValidatorManagerProxy,
+			PoAManager:     vmDeployment.PoAManager,
+		}
+	}
+
+	// Write output file (always write the .env file)
+	var vmSection string
+	if vmDeployment != nil {
+		vmSection = fmt.Sprintf(`
+			# Validator Manager Contracts
+			VALIDATOR_MANAGER_IMPL=%s
+			VALIDATOR_MANAGER_PROXY=%s
+			POA_MANAGER=%s
+`,
+			vmDeployment.ValidatorManagerImpl,
+			vmDeployment.ValidatorManagerProxy,
+			vmDeployment.PoAManager,
+		)
+	}
+
+	//No need to output evm chain id
+
+	content := fmt.Sprintf(`# Avalanche L1 Configuration
+		# Generated: %s
+		# Network: %s
+		
+		SUBNET_ID=%s
+		CHAIN_ID=%s
+		CONVERSION_TX=%s
+		EVM_CHAIN_SECTION %s
+		# RPC Endpoints
+		%s
+		`,
+		time.Now().Format(time.RFC3339),
+		helpers.NetworkName,
+		parsedSubnetID,
+		parsedChainID,
+		conversionTxID,
+		vmSection,
+		helpers.BuildRPCEndpoints(nodeURIs, parsedChainID),
+	)
+
+	if err := os.WriteFile(helpers.OutputFile, []byte(content), 0644); err != nil {
+		return fmt.Errorf("failed to write output file: %w", err)
+	}
+
+	// Output JSON if requested
+	if helpers.JsonOutput {
+		jsonBytes, err := json.MarshalIndent(output, "", "  ")
+		if err != nil {
+			return fmt.Errorf("failed to marshal JSON output: %w", err)
+		}
+		fmt.Println(string(jsonBytes))
+		return nil
+	}
+
+	// Print human-readable summary
+	fmt.Printf("\nConfiguration written to: %s\n", helpers.OutputFile)
+	fmt.Println()
+	fmt.Println("=== L1 Created Successfully ===")
+	fmt.Println()
+	fmt.Printf("Subnet ID: %s\n", parsedSubnetID)
+	fmt.Printf("Chain ID:  %s\n", parsedChainID)
+	fmt.Printf("Subnet to L1 Conversion Tx: %s\n", conversionTxID)
+	if vmDeployment != nil {
+		fmt.Println()
+		fmt.Println("Validator Manager:")
+		fmt.Printf("  Implementation:  %s\n", vmDeployment.ValidatorManagerImpl)
+		fmt.Printf("  Proxy:           %s\n", vmDeployment.ValidatorManagerProxy)
+		if vmDeployment.PoAManager != "" {
+			fmt.Printf("  PoAManager:      %s\n", vmDeployment.PoAManager)
+		}
+	}
+	fmt.Println()
+	fmt.Println("RPC Endpoints:")
+	for i, nodeURI := range nodeURIs {
+		fmt.Printf("  [%d] %s/ext/bc/%s/rpc\n", i+1, strings.TrimRight(nodeURI, "/"), parsedChainID)
+	}
+
+	return nil
+}
+
+func requisiteChecks() error {
+	if len(helpers.SubnetIDStr) == 0 {
+		return fmt.Errorf("what is the subnet ID to convert to a L1")
+	}
+
+	if len(helpers.ChainIDStr) == 0 {
+		return fmt.Errorf("chain ID required for conversion to L1")
+	}
+
+	if len(helpers.KeyName) == 0 {
+		return fmt.Errorf("wallet name required to pay transaction fees")
+	}
+
+	if len(helpers.ValidatorIPs) == 0 {
+		return fmt.Errorf("at least one validator is needed as a destination for the smart contracts (e.g. ValidatorManager contract)")
+	}
+
+	if len(helpers.RpcUrL) == 0 {
+		return fmt.Errorf("no RPC endpoints specified")
 	}
 
 	return nil
