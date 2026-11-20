@@ -26,18 +26,18 @@ func main() {
 	flag.StringVar(&helpers.NetworkName, "network", "fuji", "Network: fuji or mainnet")
 	flag.StringVar(&helpers.RpcUrL, "rpcurl", "", "Rpc node http endpoint (e.g. http://18.219.181.165:9650)")
 	flag.StringVar(&helpers.SubnetIDStr, "subnetidstr", "", "The container id of blockchain(s).")
-	flag.StringVar(&helpers.ChainIDStr, "subnetidstr", "", "The container id of blockchain(s).")
-	flag.StringVar(&helpers.GenesisProxyAddress, "genesis-proxy-address", "", "Use existing proxy address from genesis (e.g., 0xfacade0000000000000000000000000000000000)")
+	flag.StringVar(&helpers.ChainIDStr, "chainidstr", "", "The container id of blockchain(s).")
+	flag.StringVar(&helpers.GenesisProxyAddress, "genesis-proxy-address", "0xfacade0000000000000000000000000000000000", "Use existing proxy address from genesis (e.g., 0xfacade0000000000000000000000000000000000)")
 	flag.StringVar(&helpers.KeyName, "key-name", "", "Key name from platform-cli keystore (~/.platform/keys, preferred)")
-	flag.BoolVar(&helpers.DeployValidatorManager, "deploy-validator-manager", false, "Deploy ValidatorManager contracts (requires forge)")
+	flag.BoolVar(&helpers.DeployValidatorManager, "deploy-validator-manager", true, "Deploy ValidatorManager contracts (requires forge)")
 	flag.StringVar(&helpers.ValidatorIPs, "validators", "", "Comma-separated validators.  Format is host:port, don't include the protocol (i.e. http and https)")
 	flag.Float64Var(&helpers.BalanceAVAX, "validator-balance", 1.0, "Initial balance per validator in AVAX (supports decimals, e.g., 0.1)")
 	flag.StringVar(&helpers.ManagerType, "manager-type", "poa", "Validator manager type: poa, native-staking, erc20-staking")
 	flag.BoolVar(&helpers.UseLocalSigAgg, "local-sig-agg", true, "Use local signature-aggregator instead of Glacier API (for private L1s)")
 	flag.BoolVar(&helpers.CreateLocalSigAgg, "create-sig-agg", false, "Create and Start a local signature-aggregator process")
 	flag.StringVar(&helpers.SigAggURL, "sig-agg-url", "", "URL of running signature-aggregator (e.g., http://localhost:8080)")
-	flag.StringVar(&helpers.OutputFile, "output", "l1.env", "Convert subnet to L1 output file.  Don't include the suffix as -output.json will be added to the output file name.")
-	flag.BoolVar(&helpers.JsonOutput, "json", false, "Output results as JSON (for scripting)")
+	flag.StringVar(&helpers.OutputFile, "output-file", "convert-subnet-to-l1", "Convert subnet to L1 output file.  Don't include the suffix as -output.json will be added to the output file name.")
+	flag.BoolVar(&helpers.JsonOutput, "json", true, "Output results as JSON (for scripting)")
 	/**
 	* Path to the Avalanche Interchain Messaging (ICM, formerly Teleporter).  ICM is used for interchain communication.
 	* The repository is https://github.com/ava-labs/icm-services.  Note: the tools just want the parent directory to icm-contracts.
@@ -60,6 +60,11 @@ func main() {
 func run() error {
 
 	ctx := context.Background()
+
+	err := requisiteChecks()
+	if err != nil {
+		return fmt.Errorf("Prerequisites not met.  Error: %w", err)
+	}
 
 	// Get network configuration
 	networkID, rpcEndpoint, err := helpers.GetCustomNetworkConfig(helpers.NetworkName, helpers.RpcUrL)
@@ -472,6 +477,30 @@ func run() error {
 	fmt.Println("RPC Endpoints:")
 	for i, nodeURI := range nodeURIs {
 		fmt.Printf("  [%d] %s/ext/bc/%s/rpc\n", i+1, strings.TrimRight(nodeURI, "/"), parsedChainID)
+	}
+
+	return nil
+}
+
+func requisiteChecks() error {
+	if len(helpers.SubnetIDStr) == 0 {
+		return fmt.Errorf("what is the subnet ID to convert to a L1")
+	}
+
+	if len(helpers.ChainIDStr) == 0 {
+		return fmt.Errorf("chain ID required for conversion to L1")
+	}
+
+	if len(helpers.KeyName) == 0 {
+		return fmt.Errorf("wallet name required to pay transaction fees")
+	}
+
+	if len(helpers.ValidatorIPs) == 0 {
+		return fmt.Errorf("at least one validator is needed as a destination for the smart contracts (e.g. ValidatorManager contract)")
+	}
+
+	if len(helpers.RpcUrL) == 0 {
+		return fmt.Errorf("no RPC endpoints specified")
 	}
 
 	return nil

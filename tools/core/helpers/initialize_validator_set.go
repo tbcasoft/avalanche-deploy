@@ -46,6 +46,10 @@ type ConversionData struct {
 }
 
 // BuildConversionData constructs the validators metadata needed as input for smart contracts execution.
+//
+// Args:
+//
+//	weights - the weight assigned to each validator.  We use the 1st element from array as the weight for each validator.
 func BuildConversionData(
 	subnetID ids.ID,
 	chainID ids.ID,
@@ -305,7 +309,7 @@ func InitializeValidatorSet(
 //   - Determine the path containing the smart contracts to be deployed.
 //   - Using "forge", deploy the Validator Manager smart contract implementation.
 //   - Using "forge", deploy the Validator Manager proxy smart contract.
-//   - Using "forge", initialize the validator manager.
+//   - Using "forge", initialize the validator manager with the provided subnet id and owner wallet address.
 //   - Using "forge, deploy icm-contracts/avalanche/validator-manager/PoAManager.sol
 //
 // Forge is an open source cmd line tool used to deploy smart contracts to the blockchain.
@@ -392,10 +396,10 @@ func DeployValidatorManagerWithForge(
 	deployment.ProxyAdmin = ownerAddress
 	fmt.Printf("    Proxy: %s, owner address:%s\n", proxyAddr, ownerAddress)
 
-	// Step 3: Initialize ValidatorManager
+	// Step 3: Initialize ValidatorManager with the provided subnet id and owner's wallet address.
 	fmt.Println("  Initializing ValidatorManager...")
 	subnetIDHex := "0x" + hex.EncodeToString(subnetID[:])
-	initCalldata := EncodeValidatorManagerInit(ownerAddress, subnetIDHex, 0, 20)
+	initCalldata := EncodeValidatorManagerInit(ownerAddress, subnetIDHex, 3600, 100)
 
 	_, err = ForgeSend(ctx, icmContractsPath, rpcURL, privateKey, proxyAddr, initCalldata)
 	if err != nil {
@@ -515,6 +519,10 @@ func ForgeSend(
 // EncodeValidatorManagerInit encodes the call for ValidatorManager::initialize().
 //
 //	Note:  this does not add any node as validator; rather, it performs admin type of actions (e.g. the subnet for the smart contract, the admin of contract).
+//
+//	Args:
+//	  maxChurnPercentage - • Set this to 50 (50%) or 100 (100%) at launch. Setting it to 50% allows you to add a 3rd equal-weight validator immediately without hitting the cap. Setting it to 100% completely removes churn friction while you are bootstrapping your initial cluster.
+//	  churnPeriodSeconds - period you need to wait before adding validator if you hit the max churn percentage.  Recommend 3600 (1 hour) as you only have to wait 60 minutes before adding the next one.
 func EncodeValidatorManagerInit(admin, subnetID string, churnPeriodSeconds uint64, maxChurnPercentage uint8) string {
 	// function initialize(ValidatorManagerSettings calldata settings)
 	// struct ValidatorManagerSettings { address admin; bytes32 subnetID; uint64 churnPeriodSeconds; uint8 maximumChurnPercentage; }
