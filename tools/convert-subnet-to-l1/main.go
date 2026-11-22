@@ -50,6 +50,8 @@ func main() {
 	 */
 	flag.StringVar(&helpers.ContractsPath, "contracts-path", "", "Path to icm-contracts repository (or set ICM_CONTRACTS_PATH)")
 
+	flag.Parse()
+
 	if err := run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
