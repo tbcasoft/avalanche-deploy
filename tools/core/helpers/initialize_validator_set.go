@@ -46,7 +46,7 @@ type ConversionData struct {
 	InitialValidators            []InitialValidator
 }
 
-// BuildConversionData constructs the validators metadata needed as input for smart contracts execution.
+// BuildConversionData constructs the validators metadata needed as input for smart contracts execution.  This data will be used to initialize  the validator set.
 //
 // Args:
 //
@@ -335,7 +335,7 @@ func DeployValidatorManagerWithForge(
 		return nil, fmt.Errorf("forge not found. Please install foundry: curl -L https://foundry.paradigm.xyz | bash && foundryup")
 	}
 
-	// Determine the contracts path
+	// Determine the local location of the smart contracts Solidity source code.
 	if icmContractsPath == "" {
 		// Try common locations. ICM_CONTRACTS_PATH is the canonical env var;
 		// ICM_SERVICES_PATH is deprecated and checked only for backwards
@@ -409,7 +409,7 @@ func DeployValidatorManagerWithForge(
 	// Initialize data is empty - we'll call initialize separately
 	proxyAddr, err := ForgeCreate(ctx, icmContractsPath, rpcURL, privateKey,
 		"lib/openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy",
-		"--constructor-args", vmImplAddr, ownerAddress, "0x")
+		"--constructor-args", vmImplAddr, ownerAddress, "0x") //NOTE: we pass in the implementation address to the proxy.
 	if err != nil {
 		// Try alternative path for OpenZeppelin contracts
 		proxyAddr, err = ForgeCreate(ctx, icmContractsPath, rpcURL, privateKey,
@@ -419,7 +419,7 @@ func DeployValidatorManagerWithForge(
 			return nil, fmt.Errorf("failed to deploy ValidatorManager Proxy smart contract: %w", err)
 		}
 	}
-	fmt.Printf("    ValidatorManager Proxy smart contract depoyed to chain, address of bytecode: %s\n", proxyAddr)
+	fmt.Printf("    ValidatorManager Proxy smart contract deployed to chain.  We binded the validator manager smart contract implementation address to the proxy.  Deployed Proxy address of bytecode: %s\n", proxyAddr)
 
 	deployment.ValidatorManagerProxyDeployedAtAddr = proxyAddr
 	deployment.ProxyAdmin = ownerAddress

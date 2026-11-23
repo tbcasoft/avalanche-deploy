@@ -208,18 +208,18 @@ func run() error {
 			helpers.ContractsPath,
 		)
 		if err != nil {
-			return fmt.Errorf("failed to deploy validator manager: %w", err)
+			return fmt.Errorf("failed to deploy validator manager, once fixed, rerun. Error: %w", err)
 		}
 
 		managerProxyAddress, err = vmDeployment.GetManagerProxyAddressForConversion()
 		if err != nil {
-			return fmt.Errorf("failed to get manager address: %w", err)
+			return fmt.Errorf("failed to get manager address, once fixed, rerun. Error: %w", err)
 		}
 
 		// Save deployment info
 		deploymentFile := strings.TrimSuffix(helpers.OutputFile, filepath.Ext(helpers.OutputFile)) + "-output.json"
 		if err := vmDeployment.SaveDeployment(deploymentFile); err != nil {
-			fmt.Printf("  Warning: failed to save deployment info: %v\n", err)
+			fmt.Printf("  Warning: failed to save deployment info, not fatal: %v\n", err)
 		} else {
 			fmt.Printf("  Contract addresses saved to: %s\n", deploymentFile)
 		}
@@ -246,7 +246,7 @@ func run() error {
 		infoClient := info.NewClient(uri)
 		nodeID, nodePoP, err := infoClient.GetNodeID(ctx) //Get node id which includes the PoP for validator
 		if err != nil {
-			return fmt.Errorf("failed to get node %d info from %s: %w", i+1, uri, err)
+			return fmt.Errorf("failed to get node %d info from %s: %w.  Once fix, rerun.", i+1, uri, err)
 		}
 		fmt.Printf("    Node %d: %s\n", i+1, nodeID)
 
@@ -278,10 +278,10 @@ func run() error {
 		validators,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to convert subnet to L1: %w", err)
+		return fmt.Errorf("failed to convert subnet to L1, once fixed, rerun.  Error: %w", err)
 	}
 	conversionTxID := conversionTx.ID()
-	fmt.Printf("  Conversion Tx: %s\n", conversionTxID)
+	fmt.Printf("  ****** Subnet converted to L1.  Conversion Tx *********: %s\n", conversionTxID)
 
 	// Wait for chain
 	fmt.Println("  Waiting for chain to be ready...")
@@ -298,7 +298,7 @@ func run() error {
 		keyBytes := key.Bytes()
 		privateKeyHex := "0x" + fmt.Sprintf("%x", keyBytes)
 
-		// constructs the validators metadata needed as input for smart contracts execution.
+		// constructs the validators metadata needed as input for smart contracts execution to initialize the validator set.
 		conversionData := helpers.BuildConversionData(
 			parsedSubnetID,
 			parsedChainID,
@@ -353,7 +353,7 @@ func run() error {
 			return fmt.Errorf("  One of the cmd line argument is wrong as we should not be using Glacier API for signature aggregation.")
 		}
 
-		// Call initializeValidatorSet on the contract
+		// Call initializeValidatorSet on the Validator Manager contract
 		err = helpers.InitializeValidatorSet(
 			ctx,
 			chainRPCURL,
