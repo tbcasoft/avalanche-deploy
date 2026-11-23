@@ -67,9 +67,10 @@ type L1Output struct {
 
 // VMOutput represents validator manager contract addresses
 type VMOutput struct {
-	Implementation string `json:"implementation,omitempty"`
-	Proxy          string `json:"proxy,omitempty"`
-	PoAManager     string `json:"poa_manager,omitempty"`
+	ValidatorMessages string `json:"implementation,omitempty"`
+	Implementation    string `json:"implementation,omitempty"`
+	Proxy             string `json:"proxy,omitempty"`
+	PoAManager        string `json:"poa_manager,omitempty"`
 }
 
 // ValidatorManagerType represents the type of validator manager to deploy
