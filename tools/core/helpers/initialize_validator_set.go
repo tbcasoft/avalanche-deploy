@@ -23,11 +23,12 @@ Based on create-l1/initialize_validator_set.go
 
 // ValidatorManagerDeployment contains addresses of deployed validator manager contracts
 type ValidatorManagerDeployment struct {
-	ValidatorManagerImpl  string `json:"validatorManagerImpl"`
-	ValidatorManagerProxy string `json:"validatorManagerProxy"`
-	ProxyAdmin            string `json:"proxyAdmin"`
-	PoAManager            string `json:"poaManager,omitempty"`
-	StakingManager        string `json:"stakingManager,omitempty"`
+	ValidatorMessagesDeployedAtAddr     string `json:"validatorMessagesDeployedAtAddr"`
+	ValidatorManagerImplDeployedAtAddr  string `json:"validatorManagerImplDeployedAtAddr"`
+	ValidatorManagerProxyDeployedAtAddr string `json:"validatorManagerProxyDeployedAtAddr"`
+	ProxyAdmin                          string `json:"proxyAdmin"`
+	PoAManager                          string `json:"poaManager,omitempty"`
+	StakingManager                      string `json:"stakingManager,omitempty"`
 }
 
 // InitialValidator represents a validator for the conversion data
@@ -360,23 +361,50 @@ func DeployValidatorManagerWithForge(
 		}
 	}
 
-	fmt.Printf(" Using path %s for contracts to be deploy.\n", icmContractsPath)
+	fmt.Printf(" Smart contracts source code to be deployed exist at path %s\n", icmContractsPath)
 
 	deployment := &ValidatorManagerDeployment{}
 
-	// Step 1: Deploy ValidatorManager implementation
+	// Step 1: Deploy ValidatorMessages smart contract.  This library is a dependency for ValidatorManager.
+	fmt.Println(" Deploying ValidatorMessages library...")
+	validatorMessagesAddr, err := ForgeCreate(
+		ctx,
+		icmContractsPath,
+		rpcURL,
+		privateKey,
+		"icm-contracts/avalanche/validator-manager/ValidatorMessages.sol:ValidatorMessages", //actual solidity code, relative to core.ContractsPath
+	)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"failed to deploy ValidatorMessages smart contract: %w", err,
+		)
+	}
+
+	deployment.ValidatorMessagesDeployedAtAddr = validatorMessagesAddr
+	fmt.Printf(" ValidatorMessages smart contract deployed to chain, address of bytecode: %s\n", validatorMessagesAddr)
+
+	// Step 2: Deploy ValidatorManager implementation
 	fmt.Println("  Deploying ValidatorManager implementation...")
-	vmImplAddr, err := ForgeCreate(ctx, icmContractsPath, rpcURL, privateKey,
+	vmImplAddr, err := ForgeCreate(
+		ctx,
+		icmContractsPath,
+		rpcURL,
+		privateKey,
 		"icm-contracts/avalanche/validator-manager/ValidatorManager.sol:ValidatorManager", //actual solidity code, relative to core.ContractsPath
+		"--libraries",
+		fmt.Sprintf(
+			"icm-contracts/avalanche/validator-manager/ValidatorMessages.sol:ValidatorMessages:%s",
+			validatorMessagesAddr,
+		),
 		"--constructor-args", "0") // ICMInitializable.Allowed = 0
 	if err != nil {
 		return nil, fmt.Errorf("failed to deploy ValidatorManager: %w", err)
 	}
 
-	deployment.ValidatorManagerImpl = vmImplAddr
-	fmt.Printf("    Implementation: %s\n", vmImplAddr)
+	deployment.ValidatorManagerImplDeployedAtAddr = vmImplAddr
+	fmt.Printf("    ValidatorManager implementation smart contract depoyed to chain, address of bytecode: %s\n", vmImplAddr)
 
-	// Step 2: Deploy TransparentUpgradeableProxy
+	// Step 3: Deploy TransparentUpgradeableProxy
 	fmt.Println("  Deploying TransparentUpgradeableProxy...")
 	// Initialize data is empty - we'll call initialize separately
 	proxyAddr, err := ForgeCreate(ctx, icmContractsPath, rpcURL, privateKey,
@@ -388,15 +416,16 @@ func DeployValidatorManagerWithForge(
 			"lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy",
 			"--constructor-args", vmImplAddr, ownerAddress, "0x")
 		if err != nil {
-			return nil, fmt.Errorf("failed to deploy proxy: %w", err)
+			return nil, fmt.Errorf("failed to deploy ValidatorManager Proxy smart contract: %w", err)
 		}
 	}
+	fmt.Printf("    ValidatorManager Proxy smart contract depoyed to chain, address of bytecode: %s\n", proxyAddr)
 
-	deployment.ValidatorManagerProxy = proxyAddr
+	deployment.ValidatorManagerProxyDeployedAtAddr = proxyAddr
 	deployment.ProxyAdmin = ownerAddress
 	fmt.Printf("    Proxy: %s, owner address:%s\n", proxyAddr, ownerAddress)
 
-	// Step 3: Initialize ValidatorManager with the provided subnet id and owner's wallet address.
+	// Step 4: Initialize ValidatorManager with the provided subnet id and owner's wallet address.
 	fmt.Println("  Initializing ValidatorManager...")
 	subnetIDHex := "0x" + hex.EncodeToString(subnetID[:])
 	initCalldata := EncodeValidatorManagerInit(ownerAddress, subnetIDHex, 3600, 100)
@@ -407,7 +436,7 @@ func DeployValidatorManagerWithForge(
 	}
 	fmt.Println("    ValidatorManager initialized")
 
-	// Step 4: Deploy PoAManager
+	// Step 5: Deploy PoAManager
 	switch managerType {
 	case PoAValidatorManagerType:
 		fmt.Println("  Deploying PoAManager...")
@@ -420,7 +449,7 @@ func DeployValidatorManagerWithForge(
 		deployment.PoAManager = poaAddr
 		fmt.Printf("    PoAManager: %s\n", poaAddr)
 
-		// Step 5: Transfer ownership to PoAManager
+		// Step 6: Transfer ownership to PoAManager
 		fmt.Println("  Transferring ValidatorManager ownership to PoAManager...")
 		transferCalldata := EncodeTransferOwnership(poaAddr)
 		_, err = ForgeSend(ctx, icmContractsPath, rpcURL, privateKey, proxyAddr, transferCalldata)
@@ -541,7 +570,7 @@ func EncodeTransferOwnership(newOwner string) string {
 
 // GetManagerProxyAddressForConversion returns the manager proxy address bytes for ConvertSubnetToL1Tx
 func (d *ValidatorManagerDeployment) GetManagerProxyAddressForConversion() ([]byte, error) {
-	addr := d.ValidatorManagerProxy
+	addr := d.ValidatorManagerProxyDeployedAtAddr
 	if addr == "" {
 		return nil, fmt.Errorf("no validator manager proxy address")
 	}

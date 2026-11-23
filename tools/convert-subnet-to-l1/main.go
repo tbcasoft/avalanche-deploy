@@ -39,8 +39,10 @@ func main() {
 	flag.StringVar(&helpers.OutputFile, "output-file", "convert-subnet-to-l1", "Convert subnet to L1 output file.  Don't include the suffix as -output.json will be added to the output file name.")
 	flag.BoolVar(&helpers.JsonOutput, "json", true, "Output results as JSON (for scripting)")
 	/**
-	* Path to the Avalanche Interchain Messaging (ICM, formerly Teleporter).  ICM is used for interchain communication.
-	* The repository is https://github.com/ava-labs/icm-services.  Note: the tools just want the parent directory to icm-contracts.
+	* LOCAL Path to the Avalanche Interchain Messaging (ICM, formerly Teleporter) smart contracts.  ICM is used for interchain communication.
+	* The repository is https://github.com/ava-labs/icm-services; however, you need to clone the repo locally.
+	*
+	* Note: the tools just want the parent directory to icm-contracts.
 	* Within icm-services/icm-contracts/:
 	*	contracts/teleporter/  -- Deploy TeleporterMessenger for cross-chain messaging.
 	*	contracts/teleporter/registry/ -- Deploy TeleporterRegistry for cross-chain messagin.
@@ -48,7 +50,7 @@ func main() {
 	*	contracts/validator-manager/ -- L1 validator management
 	*	contracts/governance/ --  L1 governance
 	 */
-	flag.StringVar(&helpers.ContractsPath, "contracts-path", "", "Path to icm-contracts repository (or set ICM_CONTRACTS_PATH)")
+	flag.StringVar(&helpers.ContractsPath, "contracts-path", "", "Absolute local path to icm-contracts code base (or set ICM_CONTRACTS_PATH).")
 
 	flag.Parse()
 
@@ -182,7 +184,7 @@ func run() error {
 
 		// Build the chain RPC URL
 		chainRPCURL := fmt.Sprintf("%s/ext/bc/%s/rpc", strings.TrimRight(nodeURIs[0], "/"), parsedChainID)
-		fmt.Printf("  The chain RPC used when deploying the smart contracts: %s\n", chainRPCURL)
+		fmt.Printf("  Smart cpntracts live on the blockchain hence the chain RPC used when deploying the smart contracts: %s\n", chainRPCURL)
 
 		// Parse manager type, defaults to poa
 		var vmType helpers.ValidatorManagerType
@@ -193,7 +195,7 @@ func run() error {
 			vmType = helpers.ERC20TokenStakingManagerType
 		default:
 			vmType = helpers.PoAValidatorManagerType
-			fmt.Printf("  Using validator manager type of %s\n", vmType)
+			fmt.Printf("  Using validator manager type of %v\n", vmType)
 		}
 
 		vmDeployment, err = helpers.DeployValidatorManagerWithForge(
@@ -300,7 +302,7 @@ func run() error {
 		conversionData := helpers.BuildConversionData(
 			parsedSubnetID,
 			parsedChainID,
-			vmDeployment.ValidatorManagerProxy,
+			vmDeployment.ValidatorManagerProxyDeployedAtAddr,
 			nodeIDs,
 			nodePoPs,
 			weights,
@@ -325,7 +327,7 @@ func run() error {
 				networkID,
 				parsedSubnetID,
 				parsedChainID,
-				vmDeployment.ValidatorManagerProxy,
+				vmDeployment.ValidatorManagerProxyDeployedAtAddr,
 				nodeIDs,
 				nodePoPs,
 				weights,
@@ -356,7 +358,7 @@ func run() error {
 			ctx,
 			chainRPCURL,
 			privateKeyHex,
-			vmDeployment.ValidatorManagerProxy,
+			vmDeployment.ValidatorManagerProxyDeployedAtAddr,
 			conversionData,
 			signedMessage,
 			helpers.ContractsPath,
@@ -401,9 +403,10 @@ func run() error {
 	// Add validator manager info if deployed
 	if vmDeployment != nil {
 		output.ValidatorManager = &helpers.VMOutput{
-			Implementation: vmDeployment.ValidatorManagerImpl,
-			Proxy:          vmDeployment.ValidatorManagerProxy,
-			PoAManager:     vmDeployment.PoAManager,
+			ValidatorMessages: vmDeployment.ValidatorMessagesDeployedAtAddr,
+			Implementation:    vmDeployment.ValidatorManagerImplDeployedAtAddr,
+			Proxy:             vmDeployment.ValidatorManagerProxyDeployedAtAddr,
+			PoAManager:        vmDeployment.PoAManager,
 		}
 	}
 
@@ -411,13 +414,15 @@ func run() error {
 	var vmSection string
 	if vmDeployment != nil {
 		vmSection = fmt.Sprintf(`
+			VALIDATOR_MESSAGES=%s
 			# Validator Manager Contracts
 			VALIDATOR_MANAGER_IMPL=%s
 			VALIDATOR_MANAGER_PROXY=%s
 			POA_MANAGER=%s
 `,
-			vmDeployment.ValidatorManagerImpl,
-			vmDeployment.ValidatorManagerProxy,
+			vmDeployment.ValidatorMessagesDeployedAtAddr,
+			vmDeployment.ValidatorManagerImplDeployedAtAddr,
+			vmDeployment.ValidatorManagerProxyDeployedAtAddr,
 			vmDeployment.PoAManager,
 		)
 	}
@@ -468,9 +473,11 @@ func run() error {
 	fmt.Printf("Subnet to L1 Conversion Tx: %s\n", conversionTxID)
 	if vmDeployment != nil {
 		fmt.Println()
+		fmt.Println("Validator Messages:")
+		fmt.Printf("  DeployedAtAddr:  %s\n", vmDeployment.ValidatorMessagesDeployedAtAddr)
 		fmt.Println("Validator Manager:")
-		fmt.Printf("  Implementation:  %s\n", vmDeployment.ValidatorManagerImpl)
-		fmt.Printf("  Proxy:           %s\n", vmDeployment.ValidatorManagerProxy)
+		fmt.Printf("  Implementation:  %s\n", vmDeployment.ValidatorManagerImplDeployedAtAddr)
+		fmt.Printf("  Proxy:           %s\n", vmDeployment.ValidatorManagerProxyDeployedAtAddr)
 		if vmDeployment.PoAManager != "" {
 			fmt.Printf("  PoAManager:      %s\n", vmDeployment.PoAManager)
 		}
