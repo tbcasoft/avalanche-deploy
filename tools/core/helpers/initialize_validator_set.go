@@ -379,6 +379,10 @@ func DeployValidatorManagerWithForge(
 			"failed to deploy ValidatorMessages smart contract: %w", err,
 		)
 	}
+	if len(validatorMessagesAddr) == 0 {
+		return nil, fmt.Errorf(
+			"no error for ValidatorMessages smart contract deployment but the deployed address is empty")
+	}
 
 	deployment.ValidatorMessagesDeployedAtAddr = validatorMessagesAddr
 	fmt.Printf(" ValidatorMessages smart contract deployed to chain, address of bytecode: %s\n", validatorMessagesAddr)
@@ -476,6 +480,7 @@ func ForgeCreate(ctx context.Context, workDir, rpcURL, privateKey, contract stri
 		"create",
 		"--rpc-url", rpcURL,
 		"--private-key", privateKey,
+		"--broadcast",
 		"--json",
 		contract,
 	}
@@ -507,6 +512,13 @@ func ForgeCreate(ctx context.Context, workDir, rpcURL, privateKey, contract stri
 			}
 		}
 		return "", fmt.Errorf("failed to parse forge output: %w\nOutput: %s", err, string(output))
+	}
+
+	if result.DeployedTo == "" {
+		return "", fmt.Errorf(
+			"forge completed but returned no deployedTo address\nOutput: %s",
+			string(output),
+		)
 	}
 
 	return result.DeployedTo, nil
