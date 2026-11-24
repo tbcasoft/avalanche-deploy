@@ -379,6 +379,10 @@ func DeployValidatorManagerWithForge(
 			"failed to deploy ValidatorMessages smart contract: %w", err,
 		)
 	}
+	if len(validatorMessagesAddr) == 0 {
+		return nil, fmt.Errorf(
+			"no error for ValidatorMessages smart contract deployment but the deployed address is empty")
+	}
 
 	deployment.ValidatorMessagesDeployedAtAddr = validatorMessagesAddr
 	fmt.Printf(" ValidatorMessages smart contract deployed to chain, address of bytecode: %s\n", validatorMessagesAddr)
