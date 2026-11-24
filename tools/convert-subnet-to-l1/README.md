@@ -27,7 +27,7 @@ ubuntu@ip-10-8-3-214:/data/tbcasoft/avalanche-deploy/tools/convert-subnet-to-l1$
 --chainidstr="2VsBtoGoe5fz6kG78TMYGPgMFhsk6e7jbktsDpvkSJzVDSgZYR" \
 --key-name="my-l1-key-admin-created-from-platform-cli" \
 --rpcurl=http://18.219.181.165:9650 \
---validators=[host:9650.  Format is host:port.  The port is not the stakingn port (9651), use the api / http port 9650.  And don't include the protocol http and https] \
+--validators=[host:9650.  Format is host:port.  The port is NOT the stakingn port (9651), use the api / http port 9650.  And don't include the protocol http and https] \
 --genesis-proxy-address="0xfacade0000000000000000000000000000000000" \
 --deploy-validator-manager=true \
 --local-sig-agg=true \
