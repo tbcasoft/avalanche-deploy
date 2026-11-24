@@ -480,6 +480,7 @@ func ForgeCreate(ctx context.Context, workDir, rpcURL, privateKey, contract stri
 		"create",
 		"--rpc-url", rpcURL,
 		"--private-key", privateKey,
+		"--broadcast",
 		"--json",
 		contract,
 	}
@@ -511,6 +512,13 @@ func ForgeCreate(ctx context.Context, workDir, rpcURL, privateKey, contract stri
 			}
 		}
 		return "", fmt.Errorf("failed to parse forge output: %w\nOutput: %s", err, string(output))
+	}
+
+	if result.DeployedTo == "" {
+		return "", fmt.Errorf(
+			"forge completed but returned no deployedTo address\nOutput: %s",
+			string(output),
+		)
 	}
 
 	return result.DeployedTo, nil
