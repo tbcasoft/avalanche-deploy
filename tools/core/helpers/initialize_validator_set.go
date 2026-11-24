@@ -486,8 +486,10 @@ func ForgeCreate(ctx context.Context, workDir, rpcURL, privateKey, contract stri
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("forge create failed: %w\nOutput: %s", err, string(output))
+		return "", fmt.Errorf("forge create failed: %w\nOutput from Forge Create cmd: %s", err, string(output))
 	}
+
+	fmt.Printf("**  Forge Create cmd output: %s\n", string(output))
 
 	// Parse JSON output to get deployed address
 	var result struct {
