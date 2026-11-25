@@ -480,7 +480,7 @@ func ForgeCreate(ctx context.Context, workDir, rpcURL, privateKey, contract stri
 		"create",
 		"--rpc-url", rpcURL,
 		"--private-key", privateKey,
-		"--broadcast",
+		"--broadcast", //Submits the contract creation transaction to your L1
 		"--json",
 		contract,
 	}
