@@ -23,17 +23,17 @@
 # Required environment variables:
 #   AWS_ACCESS_KEY_ID
 #   AWS_SECRET_ACCESS_KEY
-#   AVALANCHE_PRIVATE_KEY (funded P-Chain key for Fuji, hex or PrivateKey- format)
+#   AVALANCHE_PRIVATE_KEY (funded P-Chain key for Fuji, hex or PrivateKey- format).  Is this your wallet's private key?
 #
 # Note: In --dry-run mode, these credentials are not required.
 #
 # Optional:
 #   FAUCET_PRIVATE_KEY (funded key on your L1 for faucet testing)
-#   ICM_CONTRACTS_PATH (path to icm-contracts repo, required for ValidatorManager)
-#   GLACIER_API_KEY (for signature aggregation, or uses local sig-agg)
+#   ICM_CONTRACTS_PATH (path to icm-contracts repo, required for ValidatorManager).  This is the local path, hot github repo url.
+#   GLACIER_API_KEY (for signature aggregation, or uses local sig-agg).  We run our own signature aggregation service.
 #
 # Genesis Configuration:
-#   The genesis file (default: configs/l1/genesis/genesis.json) must have a pre-deployed TransparentProxy at:
+#   The genesis file (default: configs/l1/genesis/genesis.json) must have a pre-deployed TransparentProxy (also referred to as genesis proxy address) at:
 #     0xfacade0000000000000000000000000000000000
 #   With ProxyAdmin at:
 #     0xdad0000000000000000000000000000000000000
@@ -167,7 +167,8 @@ else
     log_success "Dry-run: skipping funded P-Chain key requirement"
 fi
 
-# Check for ICM contracts path (needed for ValidatorManager)
+# Check for ICM contracts path.  This contains the smart contracts Solidity source code.  It's needed for ValidatorManager.
+# Note: this is the local path to the icm-contracts repo, not a GitHub URL.
 if [ -z "${ICM_CONTRACTS_PATH:-}" ]; then
     # Try common locations
     for path in ~/code/icm-contracts ../icm-contracts ../../icm-contracts; do
@@ -184,7 +185,8 @@ else
     log_warning "ICM_CONTRACTS_PATH not set - ValidatorManager initialization will be skipped"
 fi
 
-# Check for foundry (required for ValidatorManager)
+# Check for foundry (required for ValidatorManager).
+# Foundry is used to compile and deploy the ValidatorManager contract.
 if command -v forge &> /dev/null && command -v cast &> /dev/null; then
     log_success "Foundry (forge/cast) installed"
     FOUNDRY_AVAILABLE=true
@@ -330,9 +332,21 @@ GENESIS_PROXY_ADDRESS="0xfacade0000000000000000000000000000000000"
 
 log "Creating L1 blockchain..."
 log "  Using genesis proxy address: $GENESIS_PROXY_ADDRESS"
+log "  This is the stable Validator Manager address while its implementation address can change."
 log "  This address will be used in ConvertSubnetToL1Tx as the ValidatorManager"
 
 # Run create-l1 with JSON output to capture all values including conversion_tx_id
+#
+# The steps executed are:
+# 1. Load wallet
+# 2. Create subnet
+# 3. Create L1 chain using the provided genesis.json
+# 4. ******    Convert the subnet to L1 using the genesis proxy address   *******
+#
+# It does NOT:
+# - Deploy the ValidatorManager contract.
+# - Initialize the validator set.
+#
 CREATE_L1_JSON=$(mktemp)
 if ./tools/create-l1/create-l1 \
     --network=$NETWORK \
@@ -375,7 +389,9 @@ fi
 # L1 Configuration
 section "L1 Configuration"
 
-log "Configuring nodes for L1..."
+log "Conversion has occurred now lets configure each validator will track and validate your new L1 chain."
+log " This is done by adding the subnet ID and other things you are familiar with to each validator's config."
+log "Executes Ansible playbook playbooks/l1/deploy-nodes.yml"
 if make configure-l1 SUBNET_ID=$SUBNET_ID CHAIN_ID=$CHAIN_ID; then
     log_success "Nodes configured for L1"
 else
@@ -393,7 +409,7 @@ EVM_CHAIN_ID="${EVM_CHAIN_ID:-99999}"
 section "ValidatorManager Initialization"
 
 if [ "$FOUNDRY_AVAILABLE" = true ] && [ -n "${ICM_CONTRACTS_PATH:-}" ] && [ -n "${CONVERSION_TX:-}" ]; then
-    log "Initializing ValidatorManager..."
+    log "Conversion has happened, validators are tracking the new L1 and producing blocks.  Now lets initialize the ValidatorManager onto our L1 blockchain."
     log "  This will:"
     log "    1. Deploy PoAValidatorManager implementation"
     log "    2. Upgrade TransparentProxy at $GENESIS_PROXY_ADDRESS"
