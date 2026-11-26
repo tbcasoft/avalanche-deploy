@@ -24,18 +24,17 @@ Note:  by default, wallet stored in platform-cli keystore.  This wallet is passw
 
 Note:  xfacade0000000000000000000000000000000000 is out-of-box Validator Manager Proxy.  It will be use as part of conversion.
 
+Note:  rpcurl must use the P-Chain endpoint for the network where this subnet was created—not the new L1’s /ext/bc/<blockchainID>/rpc endpoint.
+
 export PLATFORM_CLI_KEY_PASSWORD=[YOUR_PASSWORD]
 ubuntu@ip-10-8-3-214:/data/tbcasoft/avalanche-deploy/tools/convert-subnet-to-l1$ ./convert-subnet-to-l1 \
 --network="fuji" \
 --subnetidstr=[E.G. 2MGNFLqeLP9EgHvLT2hfdKSvkLFwnGa1o7cDXPPcQQ88CB9C1v] \
 --chainidstr="2VsBtoGoe5fz6kG78TMYGPgMFhsk6e7jbktsDpvkSJzVDSgZYR" \
 --key-name="my-l1-key-admin-created-from-platform-cli" \
---rpcurl="http://RPC URL containing the blockchain ID of the L1, point it to one of your validators:9650" \
+--rpcurl="http://18.219.181.165:9650" \
 --validators=[host:9650.  Format is host:port.  The port is NOT the stakingn port (9651), use the api / http port 9650.  And don't include the protocol http and https] \
 --genesis-proxy-address="0xfacade0000000000000000000000000000000000" \
---deploy-validator-manager=false \
---local-sig-agg=true \
---sig-agg-url="http://18.227.100.19:8090" \
 --contracts-path="/home/ubuntu/tbcasoft/icm-services" \
 --output-file="convert-subnet-to-l1"
 

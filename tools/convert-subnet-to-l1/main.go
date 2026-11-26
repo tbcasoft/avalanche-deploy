@@ -101,6 +101,8 @@ func run() error {
 	// Use public API for wallet/transactions since validator nodes may not be connected yet
 	walletURI := rpcEndpoint
 
+	fmt.Printf("networkID=%d rpcEndpoint=%q\n", networkID, walletURI)
+
 	/**
 	Get the P-chain wallet used to pay for transactions.
 
